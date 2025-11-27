@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  bff:
+    build: ./bff
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - EXTERNAL_AUTH_URL=${EXTERNAL_AUTH_URL:-https://external-auth.example.com/login}
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - bff
