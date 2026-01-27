@@ -76,7 +76,11 @@ export default function LoginRegister() {
       if (!validateForm()) return;
 
       try {
-        const res = await fetch('/api/login', {
+        // Use explicit BFF URL when provided at build-time, otherwise fall back to same-origin proxy
+        const BFF_BASE = 'https://bff.coresmith.duckdns.org';
+        const loginUrl = BFF_BASE ? `${BFF_BASE}/api/login` : '/api/login';
+
+        const res = await fetch(loginUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: formData.email, password: formData.password }),

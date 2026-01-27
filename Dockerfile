@@ -1,13 +1,10 @@
-# Multi-stage build for React frontend
-FROM node:18-alpine AS build
+# Stage 1: Build React app with Node 20
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --legacy-peer-deps
 COPY . .
-RUN npm run build
+RUN yarn install && yarn build
 
-FROM nginx:stable-alpine
-COPY --from=build /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
