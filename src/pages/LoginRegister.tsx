@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { saveAuthFromResponse } from '../utils/auth';
+import { endpoints } from '../config/urls';
 import {
   Mail,
   Lock,
@@ -76,9 +77,8 @@ export default function LoginRegister() {
       if (!validateForm()) return;
 
       try {
-        // Use explicit BFF URL when provided at build-time, otherwise fall back to same-origin proxy
-        const BFF_BASE = 'https://bff.coresmith.duckdns.org';
-        const loginUrl = BFF_BASE ? `${BFF_BASE}/api/login` : '/api/login';
+        // Use centralized endpoint builder
+        const loginUrl = endpoints.login();
 
         const res = await fetch(loginUrl, {
           method: 'POST',
