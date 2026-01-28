@@ -50,19 +50,21 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             # 1. Navigate to deployment folder
-            cd ~/varista
+            cd ~/varista || { echo "Directory not found"; exit 1; }
             
-            # # 2. Login to Docker Hub on the VM
-            # echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            # 2. Login to Docker Hub (Uncommented for auth)
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             
-            # 3. Overwrite the .env file with the latest secrets
-            # This handles the manual step you were doing
-            cat <<EOF > .env
+            # 3. Overwrite the .env file (Added quotes to EOF to prevent variable expansion)
+            cat <<'EOF' > .env
             ${{ secrets.ENV_FILE_CONTENT }}
             EOF
             
-            # 4. Pull the specific image we just built
+            # 4. Pull images defined in your docker-compose.yml
             docker compose pull
             
-            # 5. Restart services with the new environment variables
+            # 5. Restart services
             docker compose up -d --force-recreate
+            
+            # 6. Cleanup (Optional but recommended to save disk space)
+            docker image prune -f
