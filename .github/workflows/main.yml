@@ -16,7 +16,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -55,39 +55,27 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Read .env from repo
-        id: read_env
-        run: |
-          echo "ENV_FILE_CONTENT<<EOF" >> $GITHUB_ENV
-          cat ./bff/.env >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
       - name: SSH and Update VM
         uses: appleboy/ssh-action@v1.0.3
         with:
-          # Replace with secrets or keep as-is if you want to hardcode the IP/user
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
-          # Support both key-based auth (preferred) and password auth (fallback)
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          password: ${{ secrets.VM_PASSWORD }}
           script: |
             # 1. Navigate to deployment folder
             cd ~/varista
-
-            # 2. Login to Docker Hub on the VM using password (set DOCKERHUB_PASSWORD secret)
-            echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-
-            # 3. Overwrite the .env file with the latest content from repository
-            cat <<'EOF' > ./bff/.env
-${{ env.ENV_FILE_CONTENT }}
-EOF
-
+            
+            # 2. Login to Docker Hub on the VM
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            
+            # 3. Overwrite the .env file with the latest secrets
+            # This handles the manual step you were doing
+            cat <<EOF > .env
+            ${{ secrets.ENV_FILE_CONTENT }}
+            EOF
+            
             # 4. Pull the specific image we just built
             docker compose pull
-
+            
             # 5. Restart services with the new environment variables
             docker compose up -d --force-recreate
