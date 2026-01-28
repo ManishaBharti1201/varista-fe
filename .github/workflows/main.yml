@@ -52,8 +52,8 @@ jobs:
             # 1. Navigate to deployment folder
             cd ~/varista
             
-            # 2. Login to Docker Hub on the VM
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            # # 2. Login to Docker Hub on the VM
+            # echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             
             # 3. Overwrite the .env file with the latest secrets
             # This handles the manual step you were doing
