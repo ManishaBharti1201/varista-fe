@@ -1,6 +1,6 @@
 import { useState } from "react";
-import InvoiceCreate from "./InvoiceCreate";
-import InvoiceList from "./InvoiceList";
+import InvoiceCreate from "./invoice/InvoiceCreate";
+import InvoiceList from "./invoice/InvoiceList";
 
 export default function HRMSSystemSettings() {
   const [activeTab, setActiveTab] = useState("Create Invoice");

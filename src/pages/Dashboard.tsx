@@ -1,9 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout as authLogout } from "../utils/auth";
 import {
-  Menu,
-  Search,
   Users,
   UserCheck,
   DollarSign,
@@ -12,8 +10,6 @@ import {
   Gift,
   FileText,
 } from "lucide-react";
-import Sidebar from "../components/Sidebar";
-import ClientMgmt from "./ClientMgmt";
 
 export default function Dashboard() {
   const [activeMenu, setActiveMenu] = useState("Dashboard");
@@ -39,7 +35,7 @@ export default function Dashboard() {
     } catch (e) {
       console.warn("Failed to clear localStorage on logout", e);
     }
-    navigate("/login");
+    //navigate("/login");
   };
 
   const stats = [
@@ -58,13 +54,6 @@ export default function Dashboard() {
       icon: UserCheck,
     },
     {
-      label: "Monthly Payroll",
-      value: "$450,000",
-      change: "-1.2% from last month",
-      trend: "down",
-      icon: DollarSign,
-    },
-    {
       label: "Pending Approvals",
       value: "12",
       subtext: "require attention",
@@ -79,24 +68,24 @@ export default function Dashboard() {
       status: "pending",
       indicator: "yellow",
     },
-    {
-      title: "Mike Manager checked in at Office",
-      time: "25 minutes ago",
-      status: "success",
-      indicator: "green",
-    },
-    {
-      title: "November payroll processing completed",
-      time: "2 hours ago",
-      status: "success",
-      indicator: "green",
-    },
-    {
-      title: "Emma Designer submitted travel expense",
-      time: "3 hours ago",
-      status: "pending",
-      indicator: "yellow",
-    },
+    // {
+    //   title: "Mike Manager checked in at Office",
+    //   time: "25 minutes ago",
+    //   status: "success",
+    //   indicator: "green",
+    // },
+    // {
+    //   title: "November payroll processing completed",
+    //   time: "2 hours ago",
+    //   status: "success",
+    //   indicator: "green",
+    // },
+    // {
+    //   title: "Emma Designer submitted travel expense",
+    //   time: "3 hours ago",
+    //   status: "pending",
+    //   indicator: "yellow",
+    // },
   ];
 
   const upcomingEvents = [
@@ -105,20 +94,27 @@ export default function Dashboard() {
       date: "2024-12-15 at 10:00 AM",
       icon: Users,
       color: "bg-blue-100 text-blue-600",
-    },
-    {
-      title: "John Admin Birthday",
-      date: "2024-12-16 at All Day",
-      icon: Gift,
-      color: "bg-pink-100 text-pink-600",
-    },
-    {
-      title: "Payroll Processing",
-      date: "2024-12-20 at 2:00 PM",
-      icon: DollarSign,
-      color: "bg-green-100 text-green-600",
-    },
+    }
   ];
+
+  const Greeting = () => {
+    const currentHour = new Date().getHours(); // Get the current hour (0-23)
+    let greeting = '';
+
+    if (currentHour >= 5 && currentHour < 12) {
+      greeting = 'Good Morning';
+    } else if (currentHour >= 12 && currentHour < 18) {
+      greeting = 'Good Afternoon';
+    } else {
+      greeting = 'Good Evening';
+    }
+
+    return (
+      <div>
+        <h2>{greeting} ! {userName}</h2>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -139,7 +135,7 @@ export default function Dashboard() {
           {/* Welcome Banner */}
           <div className="bg-gradient-to-r from-blue-500 to-cyan-500 px-8 py-8 text-white">
             <h1 className="text-3xl font-bold mb-2">
-              Good Morning, {userName}!
+              {Greeting()}
             </h1>
             <p className="text-blue-50">
               Here's what's happening in your organization today
@@ -172,11 +168,10 @@ export default function Dashboard() {
                               <TrendingDown className="w-4 h-4 text-red-600" />
                             )}
                             <p
-                              className={`text-xs ${
-                                stat.trend === "up"
+                              className={`text-xs ${stat.trend === "up"
                                   ? "text-green-600"
                                   : "text-red-600"
-                              }`}
+                                }`}
                             >
                               {stat.change}
                             </p>
@@ -227,11 +222,10 @@ export default function Dashboard() {
                       className="flex items-start gap-4 pb-4 border-b border-gray-100 last:border-0 last:pb-0"
                     >
                       <div
-                        className={`w-2 h-2 rounded-full mt-2 ${
-                          activity.indicator === "green"
+                        className={`w-2 h-2 rounded-full mt-2 ${activity.indicator === "green"
                             ? "bg-green-500"
                             : "bg-yellow-500"
-                        }`}
+                          }`}
                       ></div>
                       <div className="flex-1">
                         <p className="text-sm text-gray-900 font-medium">
@@ -242,11 +236,10 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          activity.status === "success"
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${activity.status === "success"
                             ? "bg-green-100 text-green-700"
                             : "bg-yellow-100 text-yellow-700"
-                        }`}
+                          }`}
                       >
                         {activity.status}
                       </span>

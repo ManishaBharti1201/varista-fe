@@ -10,10 +10,10 @@ app.use(cors());
 app.use(express.json());
 // Service domain configuration (replaceable via .env)
 // Frontend (origin) - allowed CORS origin
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'https://varista.coresmith.duckdns.org';
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
 
 // Backend service base and login path. By default use the service domain you provided.
-const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE || 'https://service.coresmith.duckdns.org';
+const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE;
 // Default to common API path; override with EXTERNAL_AUTH_PATH or EXTERNAL_AUTH_URL in .env
 const EXTERNAL_AUTH_PATH = '/user/login';
 const EXTERNAL_AUTH_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_AUTH_PATH}`;
@@ -39,9 +39,7 @@ console.log('BFF configuration:');
 console.log('FRONTEND_ORIGIN=', FRONTEND_ORIGIN);
 console.log('EXTERNAL_SERVICE_BASE=', EXTERNAL_SERVICE_BASE);
 console.log('EXTERNAL_AUTH_PATH=', EXTERNAL_AUTH_PATH);
-console.log('EXTERNAL_AUTH_URL=', EXTERNAL_AUTH_URL);
 console.log('EXTERNAL_INVOICE_PATH=', EXTERNAL_INVOICE_PATH);
-console.log('EXTERNAL_INVOICE_URL=', EXTERNAL_INVOICE_URL);
 
 // Login endpoint - forwards to external auth service and normalizes response
 app.post('/api/login', async (req, res) => {

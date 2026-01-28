@@ -17,6 +17,7 @@ import {
 
 export default function LoginRegister() {
   const [isLogin, setIsLogin] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -73,7 +74,9 @@ export default function LoginRegister() {
   };
 
   const handleSubmit = () => {
+
     const doSubmit = async () => {
+      setSubmitting(true);
       if (!validateForm()) return;
 
       try {
@@ -117,6 +120,7 @@ export default function LoginRegister() {
     };
 
     doSubmit();
+    setSubmitting(false);
   };
 
   return (
@@ -240,21 +244,19 @@ export default function LoginRegister() {
           <div className="flex gap-2 mb-8 bg-gray-100 p-1 rounded-lg">
             <button
               onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                isLogin
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${isLogin
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
             >
               Login
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                !isLogin
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${!isLogin
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
             >
               Register
             </button>
@@ -277,9 +279,8 @@ export default function LoginRegister() {
                       value={formData.fullName}
                       onChange={handleChange}
                       placeholder="Enter your full name"
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.fullName ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fullName ? "border-red-500" : "border-gray-300"
+                        }`}
                     />
                   </div>
                   {errors.fullName && (
@@ -302,9 +303,8 @@ export default function LoginRegister() {
                       value={formData.company}
                       onChange={handleChange}
                       placeholder="Enter your company name"
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.company ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.company ? "border-red-500" : "border-gray-300"
+                        }`}
                     />
                   </div>
                   {errors.company && (
@@ -327,9 +327,8 @@ export default function LoginRegister() {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="Enter your phone number"
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.phone ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.phone ? "border-red-500" : "border-gray-300"
+                        }`}
                     />
                   </div>
                   {errors.phone && (
@@ -355,9 +354,8 @@ export default function LoginRegister() {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Enter your email"
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.email ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email ? "border-red-500" : "border-gray-300"
+                    }`}
                 />
               </div>
               {errors.email && (
@@ -381,9 +379,8 @@ export default function LoginRegister() {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
-                  className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.password ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.password ? "border-red-500" : "border-gray-300"
+                    }`}
                 />
                 <button
                   onClick={() => setShowPassword(!showPassword)}
@@ -418,11 +415,10 @@ export default function LoginRegister() {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm your password"
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.confirmPassword
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.confirmPassword
+                      ? "border-red-500"
+                      : "border-gray-300"
+                      }`}
                   />
                 </div>
                 {errors.confirmPassword && (
@@ -478,6 +474,7 @@ export default function LoginRegister() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
             >
               {isLogin ? "Sign In" : "Create Account"}
+              {submitting ? "Logging in..." : ""}
             </button>
           </div>
         </div>

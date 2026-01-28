@@ -7,8 +7,9 @@ import ClientMgmt from './pages/ClientMgmt';
 import Layout from './components/Layout';
 import { isTokenValid, logout } from './utils/auth';
 import InvoiceMgmt from './pages/InvoiceMgmt';
-import InvoiceCreate from './pages/InvoiceCreate';
-import InvoiceList from './pages/InvoiceList';
+import InvoiceCreate from './pages/invoice/InvoiceCreate';
+import InvoiceList from './pages/invoice/InvoiceList';
+import QuickLinks from './pages/QuickLinks';
 
 const App: React.FC = () => {
   const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -31,6 +32,7 @@ const App: React.FC = () => {
             <Route path="create" element={<InvoiceCreate/>} />
             <Route path="manage" element={<InvoiceList/>} />
           </Route>
+          <Route path="quicklinks" element={<QuickLinks/>} />
         </Route>
       </Routes>
     </Router>

@@ -1,45 +1,31 @@
 import React, { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { clients } from "../data/clients";
+import { clients } from "../../data/clients";
 import { useNavigate } from "react-router-dom";
-import { endpoints, bffBase } from '../config/urls';
+import { endpoints, bffBase } from '../../config/urls';
+import { ChevronDown } from "lucide-react";
 
 export default function InvoiceCreate() {
   const navigate = useNavigate();
 
   const [invoice, setInvoice] = useState<any>({
-    buyerid: "345678",
-    hsnSac: "85423100",
-    centralTaxRate: 9.0,
-    stateTaxRate: 9.0,
-    stateTaxAmount: 135.0,
-    igstAmount: 10.0,
-    amountInWords: "One Thousand Seven Hundred Seventy Dollars Only",
-    bankName: "First National Bank",
-    accountNumber: "987654321012",
-    ifscCode: "FNBK0001234",
+    centralTaxRate: 18.0,
     items: [
       {
-        description: "Laptop Model X",
-        hsnSac: "84713010",
-        quantity: 1.0,
-        rate: 1000.0,
+        description: "",
+        hsnSac: "",
+        quantity: 1,
+        rate: 0.0,
         unit: "Pcs",
-        amount: 1000.0,
-      },
-      {
-        description: "Wireless Mouse",
-        hsnSac: "84716040",
-        quantity: 5.0,
-        rate: 100.0,
-        unit: "Pcs",
-        amount: 500.0,
-      },
+        amount: 0.0,
+      }
     ],
   });
 
   const [errors, setErrors] = useState<any>({});
   const [submitting, setSubmitting] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selected, setSelected] = useState("Select Client");
 
   const updateField = (field: string, value: any) =>
     setInvoice((p: any) => ({ ...p, [field]: value }));
@@ -131,28 +117,39 @@ export default function InvoiceCreate() {
 
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
+          <div className=" items-center gap-4 mb-6">
             <label className="block text-xs text-slate-600">
-              Select Client
+              Buyer Order No
             </label>
-            <select
-              value={invoice.buyerid}
-              onChange={(e) => {
-                const id = e.target.value;
-                const c = clients.find((x: any) => x.id === id);
-                  updateField("buyerid", id);
-              }}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 mb-2"
-            >
-              <option value="">-- Select Client --</option>
-              {clients.map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.id})
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="relative inline-block text-left">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                {selected}
+                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
 
+              {isOpen && (
+                <div className="absolute left-0 z-10 mt-2 w-full origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                  <div className="py-1">
+                    {clients.map((client) => (
+                      <button
+                        key={client.id}
+                        onClick={() => {
+                          setSelected(client.name);
+                          setIsOpen(false);
+                        }}
+                        className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        {client.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
           <div>
             {/* <h4 className="text-sm font-semibold text-slate-700 mb-3">Buyer</h4> */}
 
@@ -386,6 +383,6 @@ export default function InvoiceCreate() {
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
