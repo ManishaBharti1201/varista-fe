@@ -40,11 +40,11 @@ export default function Dashboard() {
 
   const stats = [
     {
-      label: "Total Employees",
-      value: "156",
+      label: "Total Revenue",
+      value: "100156",
       change: "+2% from last month",
       trend: "up",
-      icon: Users,
+      icon: DollarSign,
     },
     {
       label: "Present Today",

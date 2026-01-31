@@ -6,7 +6,11 @@ export const bffBase: string = envBff || '';
 
 export const endpoints = {
   login: (base: string = bffBase) => `${base || ''}/api/login`,
-  invoices: (base: string = bffBase) => `${base || ''}/api/invoices`,
+  invoices: (base: string = bffBase) => `${base || ''}/api/invoice`,
+  invoiceCreate: (base: string = bffBase) => `${base || ''}/api/invoice/create`,
+  invoiceList: (base: string = bffBase) => `${base || ''}/api/invoice/all`,
+  invoiceDelete: (base: string = bffBase, id: string) => `${base || ''}/api/invoice/${id}`,
+  companies: (base: string = bffBase) => `${base || ''}/api/company/all`,
   health: (base: string = bffBase) => `${base || ''}/api/health`,
 };
 

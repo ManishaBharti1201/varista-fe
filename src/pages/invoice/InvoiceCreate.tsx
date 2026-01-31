@@ -1,15 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { clients } from "../../data/clients";
 import { useNavigate } from "react-router-dom";
 import { endpoints, bffBase } from '../../config/urls';
 import { ChevronDown } from "lucide-react";
+import { useCompanyStore } from "../../store/CompanyStore";
 
 export default function InvoiceCreate() {
+  console.log("Provider rendering");
   const navigate = useNavigate();
 
+  const { companies, fetchCompanies, loading } = useCompanyStore();
+  useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
+
   const [invoice, setInvoice] = useState<any>({
-    centralTaxRate: 18.0,
+    taxAmt: 0.0,
+    taxRate: 0.0,
+    totalAmt: 0.0,
+    buyerId: 0,
     items: [
       {
         description: "",
@@ -30,33 +37,44 @@ export default function InvoiceCreate() {
   const updateField = (field: string, value: any) =>
     setInvoice((p: any) => ({ ...p, [field]: value }));
 
+  // Helper to sum item amounts
+  const calculateTotals = (items: any[], taxRate: number) => {
+    const subtotal = items.reduce((sum, it) => sum + (parseFloat(it.amount) || 0), 0);
+    const taxAmount = (subtotal * taxRate) / 100;
+    return {
+      taxAmount: parseFloat(taxAmount.toFixed(2)),
+      totalAmount: parseFloat((subtotal + taxAmount).toFixed(2))
+    };
+  };
+
   const updateItemField = (index: number, field: string, value: any) => {
     setInvoice((prev: any) => {
-      const items = [...prev.items];
-      items[index] = { ...items[index], [field]: value };
-      const qty = parseFloat(items[index].quantity) || 0;
-      const rate = parseFloat(items[index].rate) || 0;
-      items[index].amount =
-        Math.round((qty * rate + Number.EPSILON) * 100) / 100;
-      return { ...prev, items };
+      const newItems = [...prev.items];
+      newItems[index] = { ...newItems[index], [field]: value };
+
+      // Update item amount
+      const qty = parseFloat(newItems[index].quantity) || 0;
+      const rate = parseFloat(newItems[index].rate) || 0;
+      newItems[index].amount = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
+
+      const { taxAmount, totalAmount } = calculateTotals(newItems, prev.taxRate);
+      return { ...prev, items: newItems, taxAmount, totalAmount };
     });
   };
 
-  const addItem = () =>
-    setInvoice((p: any) => ({
-      ...p,
-      items: [
-        ...p.items,
-        {
-          description: "",
-          hsnSac: "",
-          quantity: 1,
-          rate: 0,
-          unit: "Pcs",
-          amount: 0,
-        },
-      ],
-    }));
+  const updateTaxRate = (rate: string) => {
+    const newRate = parseFloat(rate) || 0;
+    setInvoice((prev: any) => {
+      const { taxAmount, totalAmount } = calculateTotals(prev.items, newRate);
+      return { ...prev, taxRate: newRate, taxAmt: taxAmount, totalAmt: totalAmount };
+    });
+  };
+
+  const addItem = () => setInvoice((p: any) => ({
+    ...p,
+    items: [...p.items, { description: "", hsnSac: "", quantity: 1, rate: 0, unit: "Pcs", amount: 0 }]
+  }));
+
   const removeItem = (idx: number) =>
     setInvoice((p: any) => ({
       ...p,
@@ -71,8 +89,9 @@ export default function InvoiceCreate() {
       const token = localStorage.getItem("token");
       const headers: any = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
+      console.log("Submitting invoice", endpoints.invoiceCreate(), headers, invoice);
 
-      const res = await fetch(endpoints.invoices(), {
+      const res = await fetch(endpoints.invoiceCreate(), {
         method: "POST",
         headers,
         body: JSON.stringify(invoice),
@@ -116,54 +135,41 @@ export default function InvoiceCreate() {
       </div>
 
       <div className="p-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className=" items-center gap-4 mb-6">
-            <label className="block text-xs text-slate-600">
-              Buyer Order No
-            </label>
-            <div className="relative inline-block text-left">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                {selected}
-                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isOpen && (
-                <div className="absolute left-0 z-10 mt-2 w-full origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
-                  <div className="py-1">
-                    {clients.map((client) => (
-                      <button
-                        key={client.id}
-                        onClick={() => {
-                          setSelected(client.name);
-                          setIsOpen(false);
-                        }}
-                        className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        {client.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div>
-            {/* <h4 className="text-sm font-semibold text-slate-700 mb-3">Buyer</h4> */}
-
-            <label className="block text-xs text-slate-600">
-              Buyer Order No
-            </label>
-            <input
-              value={invoice.buyerOrderNo}
-              onChange={(e) => updateField("buyerOrderNo", e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
+        <div className="relative inline-block text-left w-80">
+          <button
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="w-full flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 
+               rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            {selected}
+            <ChevronDown
+              className={`w-50 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
             />
-          </div>
+          </button>
+
+          {isOpen && (
+            <div className="absolute left-0 z-10 mt-2 w-full origin-top-left rounded-md bg-white 
+                    shadow-lg ring-1 ring-black ring-opacity-5">
+              <div className="py-1">
+                {companies.map((client) => (
+                  <button
+                    key={client.id}
+                    onClick={() => {
+                      setSelected(client.name);
+                      updateField("buyerId", client.id);
+                      setIsOpen(false);
+                    }}
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    {client.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <div>
+
+        <div >
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold text-slate-700">Items</h4>
             <button
@@ -212,7 +218,6 @@ export default function InvoiceCreate() {
                     </td>
                     <td className="py-2 px-2">
                       <input
-                        type="number"
                         value={it.quantity}
                         onChange={(e) =>
                           updateItemField(idx, "quantity", e.target.value)
@@ -222,7 +227,6 @@ export default function InvoiceCreate() {
                     </td>
                     <td className="py-2 px-2">
                       <input
-                        type="number"
                         value={it.rate}
                         onChange={(e) =>
                           updateItemField(idx, "rate", e.target.value)
@@ -231,13 +235,13 @@ export default function InvoiceCreate() {
                       />
                     </td>
                     <td className="py-2 px-2">
-                      <input
-                        value={it.unit}
-                        onChange={(e) =>
-                          updateItemField(idx, "unit", e.target.value)
-                        }
-                        className="w-20 px-2 py-1 rounded border border-slate-200"
-                      />
+                      <select value={it.unit} onChange={(e) => updateItemField(idx, "unit", e.target.value)}
+                        className="w-24 px-2 py-1 rounded border border-slate-200 bg-white" >
+                        <option value="mandays">mandays</option>
+                        <option value="kg">kg</option>
+                        <option value="pcs">pcs</option>
+                        <option value="pack">pack</option>
+                      </select>
                     </td>
                     <td className="py-2 px-2">{(it.amount || 0).toFixed(2)}</td>
                     <td className="py-2 px-2">
@@ -258,111 +262,24 @@ export default function InvoiceCreate() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div>
             <label className="block text-xs text-slate-600">
-              HSN/SAC (Default)
+              Tax Rate
             </label>
             <input
-              value={invoice.hsnSac}
-              onChange={(e) => updateField("hsnSac", e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
+              value={invoice.taxRate}
+              onChange={(e) => updateTaxRate(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 max-w-xs"
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-600">
-              Central Tax Rate (%)
-            </label>
-            <input
-              type="number"
-              value={invoice.centralTaxRate}
-              onChange={(e) =>
-                updateField("centralTaxRate", parseFloat(e.target.value) || 0)
-              }
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
-            />
-            {errors.centralTaxRate && (
-              <div className="text-xs text-red-600">
-                {errors.centralTaxRate}
-              </div>
-            )}
+            <label className="block text-xs text-slate-600">Total Tax Amount</label>
+            <h3 className="font-bold text-slate-800 text-lg">{invoice.taxAmt}</h3>
           </div>
           <div>
-            <label className="block text-xs text-slate-600">
-              State Tax Rate (%)
-            </label>
-            <input
-              type="number"
-              value={invoice.stateTaxRate}
-              onChange={(e) =>
-                updateField("stateTaxRate", parseFloat(e.target.value) || 0)
-              }
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
-            />
-            {errors.stateTaxRate && (
-              <div className="text-xs text-red-600">{errors.stateTaxRate}</div>
-            )}
+            <label className="block text-xs text-slate-600">Final  Amount</label>
+            <h3 className="font-bold text-slate-800 text-lg">{invoice.totalAmt}</h3>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-xs text-slate-600">
-              State Tax Amount
-            </label>
-            <input
-              type="number"
-              value={invoice.stateTaxAmount}
-              onChange={(e) =>
-                updateField("stateTaxAmount", parseFloat(e.target.value) || 0)
-              }
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600">IGST Amount</label>
-            <input
-              type="number"
-              value={invoice.igstAmount}
-              onChange={(e) =>
-                updateField("igstAmount", parseFloat(e.target.value) || 0)
-              }
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600">Amount (in words)</label>
-            <input
-              value={invoice.amountInWords}
-              onChange={(e) => updateField("amountInWords", e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-xs text-slate-600">Bank Name</label>
-            <input
-              value={invoice.bankName}
-              onChange={(e) => updateField("bankName", e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600">Account Number</label>
-            <input
-              value={invoice.accountNumber}
-              onChange={(e) => updateField("accountNumber", e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-600">IFSC Code</label>
-            <input
-              value={invoice.ifscCode}
-              onChange={(e) => updateField("ifscCode", e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200"
-            />
-          </div>
-        </div>
 
         {errors.server && (
           <div className="text-sm text-red-600">{errors.server}</div>

@@ -1,41 +1,33 @@
-import React, { useState } from 'react'; // Added useState
+import React, { useEffect, useState } from 'react'; // Added useState
 import { Search, ChevronDown, Mail, Phone, Users, Calendar, Building2, Download, X } from 'lucide-react';
+
+import { title } from 'process';
+import { useCompanyStore } from '../store/CompanyStore';
 // Removed conflicting import { clients } from '../data/clients';
 
 export default function ClientMgmt() {
+  console.log("Provider rendering");
+  const { companies, fetchCompanies, loading } = useCompanyStore();
   const stats = [
-    { label: 'Total Clients', value: '5', icon: Users, color: 'blue' },
+    { label: 'Total Clients', value: companies.length, icon: Users, color: 'blue' },
     { label: 'Active', value: '5', icon: Users, color: 'green' },
     { label: 'On Leave', value: '0', icon: Calendar, color: 'yellow' },
     { label: 'Departments', value: '5', icon: Building2, color: 'purple' }
   ];
 
-  const [clients, setClients] = useState([
-    {
-      id: 'EMP001',
-      name: 'John Admin',
-      role: 'System Administrator',
-      department: 'IT',
-      status: 'active',
-      joiningDate: '1/15/2020',
-      email: 'admin@company.com',
-      phone: '+123456789',
-      initials: 'JA',
-      color: 'bg-blue-500',
-    },
-    {
-      id: 'EMP002',
-      name: 'Sarah HR',
-      role: 'HR Manager',
-      department: 'Human Resources',
-      status: 'active',
-      joiningDate: '3/20/2019',
-      email: 'hr@company.com',
-      phone: '+123456782',
-      initials: 'SH',
-      color: 'bg-cyan-500',
-    }
-  ]);
+  // 1️⃣ Fetch companies on mount and assign avatar initials
+  //useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchCompanies();
+
+      // After fetching, update visuals
+      useCompanyStore.getState().updateCompanyVisuals();
+    };
+    loadData();
+  }, [fetchCompanies]);
+
+  // 2️⃣ State for managing the overlay form
 
 
   const [showForm, setShowForm] = useState(false);
@@ -46,8 +38,11 @@ export default function ClientMgmt() {
     department: '',
     status: 'active',
     joiningDate: '',
+
     email: '',
-    phone: ''
+    phone: '',
+    gstin: '',
+    address: ''
   });
 
   const generateInitials = (name: string) => {
@@ -74,8 +69,8 @@ export default function ClientMgmt() {
   };
 
   const generateEmployeeId = () => {
-    const maxId = clients.reduce((max, client) => {
-      const num = parseInt(client.id.replace('EMP', ''));
+    const maxId = companies.reduce((max, company) => {
+      const num = parseInt(company.id.replace('EMP', ''));
       return num > max ? num : max;
     }, 0);
     return `EMP${String(maxId + 1).padStart(3, '0')}`;
@@ -95,21 +90,22 @@ export default function ClientMgmt() {
     const newClient = {
       id: generateEmployeeId(),
       name: formData.name,
-      role: formData.role,
-      department: formData.department,
-      status: formData.status,
-      joiningDate: new Date(formData.joiningDate).toLocaleDateString('en-US', {
-        month: 'numeric',
-        day: 'numeric',
-        year: 'numeric'
-      }),
+      industry: formData.department,
+      avatar: generateInitials(formData.name),
+      status: formData.status as 'active' | 'inactive',
+      createdAt: formData.joiningDate,
       email: formData.email,
       phone: formData.phone,
-      initials: generateInitials(formData.name),
-      color: generateColor()
+      color: generateColor(),
+      address: {
+        addressLine1: formData.address,
+        addressLine2: '',
+        cityStateZip: ''
+      },
+      registrationId: formData.gstin
     };
 
-    setClients(prev => [...prev, newClient]);
+    companies.push(newClient); // Directly mutate the companies array from context
     setShowForm(false);
     setFormData({
       name: '',
@@ -118,7 +114,9 @@ export default function ClientMgmt() {
       status: 'active',
       joiningDate: '',
       email: '',
-      phone: ''
+      phone: '',
+      gstin: '',
+      address: ''
     });
   };
 
@@ -131,7 +129,9 @@ export default function ClientMgmt() {
       status: 'active',
       joiningDate: '',
       email: '',
-      phone: ''
+      phone: '',
+      gstin: '',
+      address: ''
     });
   };
 
@@ -212,30 +212,32 @@ export default function ClientMgmt() {
               </tr>
             </thead>
             <tbody>
-              {clients.map((client, index) => (
+              {companies.map((client, index) => (
                 <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 ${client.color} rounded-full flex items-center justify-center`}>
-                        <span className="text-white font-bold text-sm">{client.initials}</span>
+                        <span className="text-white font-bold text-sm">{client.avatar}</span>
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{client.name}</p>
-                        <p className="text-xs text-gray-500">{client.role}</p>
-                        <p className="text-xs text-gray-400">{client.id}</p>
+                        {/* <p className="text-xs text-gray-500"></p> */}
+                        <p className="text-xs text-gray-600">ID: {client.id}</p>
                       </div>
                     </div>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="text-sm text-gray-900">{client.department}</span>
+                    <p className="text-sm text-gray-600">{client.address.addressLine1}</p>
+                    <p className="text-sm text-gray-600">{client.address.addressLine2}</p>
+                    <p className="text-sm text-gray-600">{client.address.cityStateZip}</p>
                   </td>
                   <td className="py-4 px-4">
                     <span className="inline-flex px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                      {client.status}
+                      Active
                     </span>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="text-sm text-gray-900">{client.joiningDate}</span>
+                    <span className="text-sm text-gray-900">{client.createdAt}</span>
                   </td>
                   <td className="py-4 px-4">
                     <div className="space-y-1">
