@@ -21,7 +21,7 @@ export default function InvoiceCreate() {
       {
         description: "",
         hsnSac: "",
-        quantity: 1,
+        quantity: 0,
         rate: 0.0,
         unit: "Pcs",
         amount: 0.0,
@@ -32,7 +32,7 @@ export default function InvoiceCreate() {
   const [errors, setErrors] = useState<any>({});
   const [submitting, setSubmitting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState("Select Client");
+  const [selected, setSelected] = useState("Select Company");
 
   const updateField = (field: string, value: any) =>
     setInvoice((p: any) => ({ ...p, [field]: value }));
@@ -58,7 +58,7 @@ export default function InvoiceCreate() {
       newItems[index].amount = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
 
       const { taxAmount, totalAmount } = calculateTotals(newItems, prev.taxRate);
-      return { ...prev, items: newItems, taxAmount, totalAmount };
+      return { ...prev, items: newItems, taxAmount, totalAmt:totalAmount };
     });
   };
 
@@ -83,8 +83,16 @@ export default function InvoiceCreate() {
 
 
   const submit = async () => {
+    setErrors({});
+    if (invoice.buyerId === 0) {
+      setErrors((p: any) => ({ ...p, buyer: "Please select a client." }));
+      return;
+    }
+    if (invoice.items.length === 0) {
+      setErrors((p: any) => ({ ...p, items: "At least one item is required." }));
+      return;
+    }
     setSubmitting(true);
-    setErrors((p: any) => ({ ...p, server: undefined }));
     try {
       const token = localStorage.getItem("token");
       const headers: any = { "Content-Type": "application/json" };
@@ -118,6 +126,27 @@ export default function InvoiceCreate() {
     }
   };
 
+  const reset = () => {
+    setErrors({});
+    setInvoice({
+      taxAmt: 0.0,
+      taxRate: 0.0,
+      totalAmt: 0.0,
+      buyerId: 0,
+      items: [
+        {
+          description: "",
+          hsnSac: "",
+          quantity: 0,
+          rate: 0.0,
+          unit: "Pcs",
+          amount: 0.0,
+        }
+      ],
+    });
+    setSelected("Select Company");
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-transparent">
@@ -143,7 +172,7 @@ export default function InvoiceCreate() {
           >
             {selected}
             <ChevronDown
-              className={`w-50 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+              className={`w-5 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
             />
           </button>
 
@@ -286,10 +315,11 @@ export default function InvoiceCreate() {
         )}
         <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
           <button
+            onClick={reset}
             disabled={submitting}
             className="px-6 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
           >
-            Cancel
+            Reset
           </button>
           <button
             onClick={submit}

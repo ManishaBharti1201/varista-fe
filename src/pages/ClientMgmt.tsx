@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'; // Added useState
+import React, { use, useEffect, useState } from 'react'; // Added useState
 import { Search, ChevronDown, Mail, Phone, Users, Calendar, Building2, Download, X } from 'lucide-react';
 
 import { title } from 'process';
@@ -7,10 +7,10 @@ import { useCompanyStore } from '../store/CompanyStore';
 
 export default function ClientMgmt() {
   console.log("Provider rendering");
-  const { companies, fetchCompanies, loading } = useCompanyStore();
+  const { companies, fetchCompanies, loading, createCompany } = useCompanyStore();
   const stats = [
-    { label: 'Total Clients', value: companies.length, icon: Users, color: 'blue' },
-    { label: 'Active', value: '5', icon: Users, color: 'green' },
+    { label: 'Total Company', value: companies.length, icon: Users, color: 'blue' },
+    { label: 'Active', value: '5', icon: Mail, color: 'green' },
     { label: 'On Leave', value: '0', icon: Calendar, color: 'yellow' },
     { label: 'Departments', value: '5', icon: Building2, color: 'purple' }
   ];
@@ -34,105 +34,68 @@ export default function ClientMgmt() {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    role: '',
-    department: '',
-    status: 'active',
-    joiningDate: '',
-
     email: '',
     phone: '',
     gstin: '',
-    address: ''
+    address: {
+      addressLine1: '',
+      addressLine2: '',
+      cityStateZip: ''
+    }
   });
 
-  const generateInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const generateColor = () => {
-    const colors = [
-      'bg-blue-500',
-      'bg-cyan-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-green-500',
-      'bg-orange-500',
-      'bg-red-500',
-      'bg-indigo-500'
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
-
-  const generateEmployeeId = () => {
-    const maxId = companies.reduce((max, company) => {
-      const num = parseInt(company.id.replace('EMP', ''));
-      return num > max ? num : max;
-    }, 0);
-    return `EMP${String(maxId + 1).padStart(3, '0')}`;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+    // Check if the input name indicates a nested address field (e.g., "address.cityStateZip")
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...(prev[parent as keyof typeof prev] as object),
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    setSubmitting(true);
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newClient = {
-      id: generateEmployeeId(),
-      name: formData.name,
-      industry: formData.department,
-      avatar: generateInitials(formData.name),
-      status: formData.status as 'active' | 'inactive',
-      createdAt: formData.joiningDate,
-      email: formData.email,
-      phone: formData.phone,
-      color: generateColor(),
-      address: {
-        addressLine1: formData.address,
-        addressLine2: '',
-        cityStateZip: ''
-      },
-      registrationId: formData.gstin
-    };
+    // valiatre inputs here if needed
+    if (!formData.name || !formData.email || !formData.phone || !formData.gstin || !formData.address.addressLine1 || !formData.address.cityStateZip) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+    setSubmitting(true);
 
-    companies.push(newClient); // Directly mutate the companies array from context
-    setShowForm(false);
-    setFormData({
-      name: '',
-      role: '',
-      department: '',
-      status: 'active',
-      joiningDate: '',
-      email: '',
-      phone: '',
-      gstin: '',
-      address: ''
-    });
+    try {
+      // The store's createCompany handles the API call and visual defaults
+      await createCompany(formData);
+      handleCancel(); // Reset and close
+    } catch (err) {
+      console.error('Failed to create company', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
     setShowForm(false);
     setFormData({
       name: '',
-      role: '',
-      department: '',
-      status: 'active',
-      joiningDate: '',
       email: '',
       phone: '',
       gstin: '',
-      address: ''
+      address: {
+        addressLine1: '',
+        addressLine2: '',
+        cityStateZip: ''
+      }
     });
+    setSubmitting(false);
   };
 
 
@@ -195,17 +158,17 @@ export default function ClientMgmt() {
 
             className={`px-6 py-2.5 text-sm font-medium text-white rounded-lg shadow-lg shadow-blue-200 transition-all ${submitting ? "bg-blue-400" : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"}`}
           >
-            + Add New Client
+            + Add Client
           </button>
         </div>
 
         {/* Client Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-80 overflow-y-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Client</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Department</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Address</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Joining Date</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Contact</th>
@@ -222,7 +185,7 @@ export default function ClientMgmt() {
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{client.name}</p>
                         {/* <p className="text-xs text-gray-500"></p> */}
-                        <p className="text-xs text-gray-600">ID: {client.id}</p>
+                        <p className="text-xs text-gray-600">Client Id: # {client.id}</p>
                       </div>
                     </div>
                   </td>
@@ -279,89 +242,78 @@ export default function ClientMgmt() {
                 {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name <span className="text-red-500">*</span>
+                    Company Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="name"
-                    value={formData.name}
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder="Enter full name"
+                    placeholder="e.g., Acme Corporation"
+                  />
+                </div>
+                {/* GSTIN */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    GSTIN <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="gstin"
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="e.g., 22AAAAA0000A1Z5"
                   />
                 </div>
 
                 {/* Role */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Role <span className="text-red-500">*</span>
+                    Address Line 1 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    name="role"
-                    value={formData.role}
+                    name="address.addressLine1" // Note the dot notation
+                    value={formData.address.addressLine1}
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder="e.g., System Administrator"
+                    placeholder="e.g., 123 Main Street"
                   />
                 </div>
 
-                {/* Department */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Department <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="department"
-                    value={formData.department}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  >
-                    <option value="">Select a department</option>
-                    <option value="IT">IT</option>
-                    <option value="Human Resources">Human Resources</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Sales">Sales</option>
-                    <option value="Operations">Operations</option>
-                    <option value="Engineering">Engineering</option>
-                  </select>
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-
-                {/* Joining Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Joining Date <span className="text-red-500">*</span>
+                    Address Line 2 <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="date"
-                    name="joiningDate"
-                    value={formData.joiningDate}
+                    type="text"
+                    name="address.addressLine2"
+                    value={formData.address.addressLine2}
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="e.g., Suite 500"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City, State, Zip <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="address.cityStateZip"
+                    value={formData.address.cityStateZip}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="e.g., New York, NY 10001"
+                  />
+                </div>
+
 
                 {/* Email */}
                 <div>
@@ -371,7 +323,6 @@ export default function ClientMgmt() {
                   <input
                     type="email"
                     name="email"
-                    value={formData.email}
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
@@ -387,11 +338,10 @@ export default function ClientMgmt() {
                   <input
                     type="tel"
                     name="phone"
-                    value={formData.phone}
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder="+1234567890"
+                    placeholder="+1 234 567 8900"
                   />
                 </div>
               </div>

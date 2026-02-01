@@ -11,6 +11,8 @@ export const endpoints = {
   invoiceCreate: (base: string = bffBase) => `${base || ''}/api/invoice/create`,
   invoiceList: (base: string = bffBase) => `${base || ''}/api/invoice/all`,
   invoiceDelete: (base: string = bffBase, id: string) => `${base || ''}/api/invoice/${id}`,
+  invoiceDownload: (base: string = bffBase, id: string) => `${base || ''}/api/invoice/${id}/download`,
+  companyCreate: (base: string = bffBase) => `${base || ''}/api/company/create`,
   companies: (base: string = bffBase) => `${base || ''}/api/company/all`,
   health: (base: string = bffBase) => `${base || ''}/api/health`,
 };

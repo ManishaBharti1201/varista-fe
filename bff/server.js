@@ -21,6 +21,10 @@ const EXTERNAL_AUTH_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_AUTH_PATH}`;
 // External companies endpoint (can be overridden)
 const EXTERNAL_COMPANY_LIST_PATH = '/company/all';
 const EXTERNAL_COMPANY_LIST_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_COMPANY_LIST_PATH}`;
+
+const EXTERNAL_COMPANY_CREATE_PATH = '/company/create';
+const EXTERNAL_COMPANY_CREATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_COMPANY_CREATE_PATH}`;
+
 // External invoices endpoint (can be overridden)
 const EXTERNAL_INVOICE_CREATE_PATH = '/invoice/create';
 const EXTERNAL_INVOICE_CREATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_CREATE_PATH}`;
@@ -30,6 +34,9 @@ const EXTERNAL_INVOICE_LIST_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_LI
 
 const EXTERNAL_INVOICE_DELETE_PATH = '/invoice';
 const EXTERNAL_INVOICE_DELETE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_DELETE_PATH}`;
+
+const EXTERNAL_INVOICE_DOWNLOAD_PATH = '/invoice/{id}/download';
+const EXTERNAL_INVOICE_DOWNLOAD_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_DOWNLOAD_PATH}`;
 
 // Restrict CORS to the frontend origin if provided; otherwise allow all
 if (FRONTEND_ORIGIN) {
@@ -142,6 +149,49 @@ app.get('/api/company/all', async (req, res) => {
     return res.status(resp.status).json(body);
   } catch (err) {
     console.error('BFF /api/companies error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+//Create company - forward to external companies API
+app.post('/api/company/create', async (req, res) => {
+  console.log('Create company request', req.body);
+  const company = req.body;
+  if (!company || Object.keys(company).length === 0) {
+    return res.status(400).json({ message: 'company payload is required' });
+  }
+
+  try {
+    const target = EXTERNAL_COMPANY_CREATE_URL; // e.g., https://backend/api/company/create
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_COMPANY_CREATE_URL not set' });
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    // forward authorization header if client provided a bearer token
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    // allow inserting a BFF API key for outbound requests
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(company),
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External company API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external company service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/company error', err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });
@@ -279,14 +329,46 @@ app.delete('/api/invoice/:id', async (req, res) => {
 });
 
 //Download invoice - forward to external invoices API
-app.get('/api/invoice/download/:id', async (req, res) => {
+app.get('/api/invoice/:id/download', async (req, res) => {
   console.log('Download invoice request for ID:', req.params.id);
 
-  // For demonstration, just returning a placeholder response
-  res.setHeader('Content-Disposition', `attachment; filename=invoice_${req.params.id}.pdf`);
-  res.setHeader('Content-Type', 'application/pdf');
-  res.send(`%PDF-1.4\n% Placeholder PDF content for invoice ID: ${req.params.id}\n%%EOF`);
+  try {
+    const target = `${EXTERNAL_INVOICE_DOWNLOAD_URL}`.replace('{id}', req.params.id);
+    
+    if (!EXTERNAL_INVOICE_DOWNLOAD_URL) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_INVOICE_DOWNLOAD_URL not set' });
+    }
+
+    const headers = { 'Accept': 'application/pdf' };
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, { method: 'GET', headers });
+
+    // Handle API errors before processing the body
+    if (!resp.ok) {
+      const errorBody = await resp.text();
+      console.error('External invoice download API error', resp.status, errorBody);
+      return res.status(resp.status).json({ message: 'External service error', details: errorBody });
+    }
+
+    // Get the actual binary data from the response
+    const body = await resp.buffer(); 
+
+    // Set appropriate headers for the real PDF
+    res.setHeader('Content-Disposition', `attachment; filename="${req.params.id}.pdf"`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', body.length);
+
+    // Send the actual binary buffer
+    res.send(body);
+
+  } catch (err) {
+    console.error('BFF /api/invoice/:id/download GET error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
 });
 
 
-app.listen(port, () => console.log(`BFF listening on `+ `http://localhost:${port}`));
+
+app.listen(port, () => console.log(`BFF listening on http://localhost:${port}`));
