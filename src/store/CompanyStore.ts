@@ -52,13 +52,6 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
   createCompany: async (companyData: Partial<Company>) => {
     const { companies } = get();
 
-    // Logic for ID generation moved here
-    const maxId = companies.reduce((max, c) => {
-      const num = parseInt(c.id.replace('EMP', '')) || 0;
-      return num > max ? num : max;
-    }, 0);
-    const newId = `EMP${String(maxId + 1).padStart(3, '0')}`;
-
     const payload = {
       ...companyData,
       avatar: generateInitials(companyData.name || ''),
