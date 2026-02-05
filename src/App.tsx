@@ -10,6 +10,9 @@ import InvoiceMgmt from './pages/InvoiceMgmt';
 import InvoiceCreate from './pages/invoice/InvoiceCreate';
 import InvoiceList from './pages/invoice/InvoiceList';
 import QuickLinks from './pages/QuickLinks';
+import QuotationList from './pages/quotation/QuotationList';
+import QuotationCreate from './pages/quotation/QuotationCreate';
+import QuotationMgmt from './pages/QuotationMgmt';
 
 const App: React.FC = () => {
   const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -24,15 +27,18 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginRegister />} />
-        <Route path="/" element={<RequireAuth><Layout/></RequireAuth>}>
-          <Route index element={<Dashboard/>} />
-          <Route path="clients" element={<ClientMgmt/>} />
-          <Route path="invoices" element={<InvoiceMgmt/>}>
-            <Route index element={<Navigate to="create" replace />} />
-            <Route path="create" element={<InvoiceCreate/>} />
-            <Route path="manage" element={<InvoiceList/>} />
+        <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
+          <Route index element={<Dashboard />} />
+          <Route path="/clients" element={<ClientMgmt />} />
+          <Route path="/invoices" element={<InvoiceMgmt />}>
+            <Route path="/invoices/create" element={<InvoiceCreate />} />
+            <Route path="/invoices/manage" element={<InvoiceList />} />
           </Route>
-          <Route path="quicklinks" element={<QuickLinks/>} />
+          <Route path="/quotations" element={<QuotationMgmt />}>
+            <Route path="/quotations/create" element={<QuotationCreate />} />
+            <Route path="/quotations/manage" element={<QuotationList />} />
+          </Route>
+          <Route path="/quicklinks" element={<QuickLinks />} />
         </Route>
       </Routes>
     </Router>

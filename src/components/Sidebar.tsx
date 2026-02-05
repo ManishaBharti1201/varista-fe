@@ -23,6 +23,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/" },
   { icon: Users, label: "Clients", to: "/clients" },
   { icon: FileText, label: "Invoices", to: "/invoices" },
+  { icon: FileText, label: "Quotations", to: "/quotations" },
   { icon: Link, label: "Quick Links", to: "/quickLinks" },
 ];
 

@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 export default function LoginRegister() {
-  const [isLogin, setIsLogin] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -52,21 +51,6 @@ export default function LoginRegister() {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
-    }
-
-    if (!isLogin) {
-      if (!formData.fullName) {
-        newErrors.fullName = "Full name is required";
-      }
-      if (!formData.company) {
-        newErrors.company = "Company name is required";
-      }
-      if (!formData.phone) {
-        newErrors.phone = "Phone number is required";
-      }
-      if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match";
-      }
     }
 
     setErrors(newErrors);
@@ -231,115 +215,17 @@ export default function LoginRegister() {
           {/* Form Header */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              {isLogin ? "Welcome Back!" : "Create Account"}
+              Welcome Back!
             </h2>
             <p className="text-gray-600">
-              {isLogin
-                ? "Sign in to access your HRMS dashboard"
-                : "Get started with your HRMS account"}
-            </p>
-          </div>
+              Sign in to access your HRMS dashboard
 
-          {/* Toggle Buttons */}
-          <div className="flex gap-2 mb-8 bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${isLogin
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-                }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${!isLogin
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-                }`}
-            >
-              Register
-            </button>
-          </div>
+            </p>
+          </div>            
 
           {/* Form */}
           <div className="space-y-5">
             {/* Register Fields */}
-            {!isLogin && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                      placeholder="Enter your full name"
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fullName ? "border-red-500" : "border-gray-300"
-                        }`}
-                    />
-                  </div>
-                  {errors.fullName && (
-                    <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{errors.fullName}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Company Name
-                  </label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      name="company"
-                      value={formData.company}
-                      onChange={handleChange}
-                      placeholder="Enter your company name"
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.company ? "border-red-500" : "border-gray-300"
-                        }`}
-                    />
-                  </div>
-                  {errors.company && (
-                    <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{errors.company}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      placeholder="Enter your phone number"
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.phone ? "border-red-500" : "border-gray-300"
-                        }`}
-                    />
-                  </div>
-                  {errors.phone && (
-                    <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{errors.phone}</span>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
 
             {/* Email */}
             <div>
@@ -401,37 +287,8 @@ export default function LoginRegister() {
               )}
             </div>
 
-            {/* Confirm Password */}
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm your password"
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.confirmPassword
-                      ? "border-red-500"
-                      : "border-gray-300"
-                      }`}
-                  />
-                </div>
-                {errors.confirmPassword && (
-                  <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>{errors.confirmPassword}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Remember Me / Forgot Password */}
-            {isLogin && (
+            { (
               <div className="flex items-center justify-between">
                 <label className="flex items-center">
                   <input
@@ -449,7 +306,7 @@ export default function LoginRegister() {
             )}
 
             {/* Terms */}
-            {!isLogin && (
+            {(
               <div className="flex items-start">
                 <input
                   type="checkbox"
@@ -473,7 +330,7 @@ export default function LoginRegister() {
               onClick={handleSubmit}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
             >
-              {isLogin ? "Sign In" : "Create Account"}
+              Sign In 
               {submitting ? "Logging in..." : ""}
             </button>
           </div>
