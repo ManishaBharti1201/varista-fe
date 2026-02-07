@@ -38,6 +38,15 @@ const EXTERNAL_INVOICE_DELETE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_
 const EXTERNAL_INVOICE_DOWNLOAD_PATH = '/invoice/{id}/download';
 const EXTERNAL_INVOICE_DOWNLOAD_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_DOWNLOAD_PATH}`;
 
+const EXTERNAL_EMPLOYEE_CREATE_PATH = '/employee/create';
+const EXTERNAL_EMPLOYEE_CREATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_EMPLOYEE_CREATE_PATH}`;
+
+const EXTERNAL_EMPLOYEE_LIST_PATH = '/employee/all';
+const EXTERNAL_EMPLOYEE_LIST_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_EMPLOYEE_LIST_PATH}`;
+
+const EXTERNAL_EMPLOYEE_DELETE_PATH = '/employee';
+const EXTERNAL_EMPLOYEE_DELETE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_EMPLOYEE_DELETE_PATH}`;
+
 // Restrict CORS to the frontend origin if provided; otherwise allow all
 if (FRONTEND_ORIGIN) {
   app.use(cors({ origin: FRONTEND_ORIGIN }));
@@ -368,6 +377,140 @@ app.get('/api/invoice/:id/download', async (req, res) => {
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });
+
+//Create employee - forward to external employees API
+
+app.post('/api/employee/create', async (req, res) => {
+  console.log('Create employee request', req.body);
+  const employee = req.body;
+  if (!employee || Object.keys(employee).length === 0) {
+    return res.status(400).json({ message: 'employee payload is required' });
+  }
+
+  try {
+    const target = EXTERNAL_EMPLOYEE_CREATE_URL; // e.g., https://backend/api/employee/create
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_EMPLOYEE_CREATE_URL not set' });
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    // forward authorization header if client provided a bearer token
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    // allow inserting a BFF API key for outbound requests
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(employee),
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External employee API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external employee service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/employee error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+// List employees - forward to external employees API
+app.get('/api/employee/all', async (req, res) => {
+  console.log('List employees request');
+
+  try {
+    const target = EXTERNAL_EMPLOYEE_LIST_URL; // e.g., https://backend/api/employees
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_EMPLOYEE_LIST_URL not set' });
+    }
+
+    const headers = { 'Accept': 'application/json' };
+
+    // forward authorization header if client provided a bearer token
+    if (req.headers && req.headers.authorization) {
+      headers.authorization = req.headers.authorization;
+    }
+
+    // allow inserting a BFF API key for outbound requests
+    if (process.env.BFF_API_KEY) {      headers['x-api-key'] = process.env.BFF_API_KEY;
+    }
+
+    const resp = await fetch(target, {
+      method: 'GET',
+      headers
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+
+    if (ct.includes('application/json')) {
+      body = await resp.json().catch(() => null);
+    } else {
+      body = await resp.text().catch(() => null);
+    }
+
+    if (!resp.ok) {
+      console.error('External employee API error', resp.status, body);
+      return res.status(resp.status).json({
+        message: (body && body.message) || body || 'external employee service error',
+        details: body
+      });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/employees error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+//Delete employee - forward to external employees API
+app.delete('/api/employee/:id', async (req, res) => {
+  console.log('Delete employee request for ID:', req.params.id);
+
+  try {
+    const target = `${EXTERNAL_EMPLOYEE_DELETE_URL}/${req.params.id}`;
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_EMPLOYEE_DELETE_URL not set' });
+    }
+
+    const headers = { 'Accept': 'application/json' };
+    // forward authorization header if client provided a bearer token
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    // allow inserting a BFF API key for outbound requests
+    if (process.env.BFF_API_KEY) headers  ['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'DELETE',
+      headers,
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External employee API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external employee service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/employee/:id DELETE error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+
 
 
 

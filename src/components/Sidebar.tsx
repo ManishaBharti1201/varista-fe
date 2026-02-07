@@ -24,6 +24,7 @@ const menuItems = [
   { icon: Users, label: "Clients", to: "/clients" },
   { icon: FileText, label: "Invoices", to: "/invoices" },
   { icon: FileText, label: "Quotations", to: "/quotations" },
+  { icon: Users, label: "Employees", to: "/employees" },
   { icon: Link, label: "Quick Links", to: "/quickLinks" },
 ];
 

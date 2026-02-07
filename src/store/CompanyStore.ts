@@ -40,7 +40,7 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
   fetchCompanies: async () => {
     set({ loading: true });
     try {
-      const res = await fetch(endpoints.companies());
+      const res = await fetch(endpoints.companiesList());
       const data = await res.json();
       set({ companies: data, loading: false });
     } catch (err) {

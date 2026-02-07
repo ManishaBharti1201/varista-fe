@@ -13,6 +13,7 @@ import QuickLinks from './pages/QuickLinks';
 import QuotationList from './pages/quotation/QuotationList';
 import QuotationCreate from './pages/quotation/QuotationCreate';
 import QuotationMgmt from './pages/QuotationMgmt';
+import EmployeeMgmt from './pages/EmployeeMgmt';
 
 const App: React.FC = () => {
   const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -38,6 +39,7 @@ const App: React.FC = () => {
             <Route path="/quotations/create" element={<QuotationCreate />} />
             <Route path="/quotations/manage" element={<QuotationList />} />
           </Route>
+          <Route path="/employees" element={<EmployeeMgmt />} />
           <Route path="/quicklinks" element={<QuickLinks />} />
         </Route>
       </Routes>

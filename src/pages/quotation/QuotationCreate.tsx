@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { endpoints, bffBase } from '../../config/urls';
+import { endpoints } from '../../config/urls';
 import { ChevronDown } from "lucide-react";
 import { useCompanyStore } from "../../store/CompanyStore";
 import { Toast } from "../../components/Toast";
