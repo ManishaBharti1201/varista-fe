@@ -3,6 +3,7 @@ import { Download, Trash2, ChevronUp, ChevronDown, FilterX } from 'lucide-react'
 import { useCompanyStore } from '../../store/CompanyStore';
 import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
+import { log } from 'util';
 
 interface InvoiceRow {
   invoiceId: string;
@@ -124,9 +125,10 @@ export default function InvoiceList() {
     }
   };
 
-  const downloadInvoice = async (invoiceNo: string) => {
+  const downloadInvoice = async (invoiceId: string) => {
     try {
-      const response = await fetch(endpoints.invoiceDownload(undefined, invoiceNo), {
+      console.log('Downloading invoice with ID:', invoiceId);
+      const response = await fetch(endpoints.invoiceDownload(undefined, invoiceId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -140,7 +142,7 @@ export default function InvoiceList() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.setAttribute('download', `${invoiceNo}.pdf`);
+      link.setAttribute('download', `${invoiceId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -234,7 +236,7 @@ export default function InvoiceList() {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => downloadInvoice(r.invoiceNo)}
+                          onClick={() => downloadInvoice(r.invoiceId)}
                           className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-blue-100 hover:text-blue-600 transition-colors"
                           title="Download PDF"
                         >

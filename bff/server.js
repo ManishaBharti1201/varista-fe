@@ -47,6 +47,19 @@ const EXTERNAL_EMPLOYEE_LIST_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_EMPLOYEE_
 const EXTERNAL_EMPLOYEE_DELETE_PATH = '/employee';
 const EXTERNAL_EMPLOYEE_DELETE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_EMPLOYEE_DELETE_PATH}`;
 
+const EXTERNAL_QUOTATION_CREATE_PATH = '/quotation/create';
+const EXTERNAL_QUOTATION_CREATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_QUOTATION_CREATE_PATH}`;
+
+const EXTERNAL_QUOTATION_LIST_PATH = '/quotation/all';
+const EXTERNAL_QUOTATION_LIST_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_QUOTATION_LIST_PATH}`;
+
+const EXTERNAL_QUOTATION_DELETE_PATH = '/quotation';
+const EXTERNAL_QUOTATION_DELETE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_QUOTATION_DELETE_PATH}`;
+
+const EXTERNAL_QUOTATION_DOWNLOAD_PATH = '/quotation/{id}/download';
+const EXTERNAL_QUOTATION_DOWNLOAD_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_QUOTATION_DOWNLOAD_PATH}`;
+
+
 // Restrict CORS to the frontend origin if provided; otherwise allow all
 if (FRONTEND_ORIGIN) {
   app.use(cors({ origin: FRONTEND_ORIGIN }));
@@ -506,6 +519,175 @@ app.delete('/api/employee/:id', async (req, res) => {
     return res.status(resp.status).json(body);
   } catch (err) {
     console.error('BFF /api/employee/:id DELETE error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+// Similar endpoints can be created for quotations using the same pattern
+app.post('/api/quotation/create', async (req, res) => {
+  console.log('Create quotation request', req.body);
+  const quotation = req.body;
+  if (!quotation || Object.keys(quotation).length === 0) {
+    return res.status(400).json({ message: 'quotation payload is required' });
+  }
+
+  try {
+    const target = EXTERNAL_QUOTATION_CREATE_URL; // e.g., https://backend/api/quotation/create
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_QUOTATION_CREATE_URL not set' });
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    // forward authorization header if client provided a bearer token
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    // allow inserting a BFF API key for outbound requests
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(quotation),
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External quotation API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external quotation service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/quotation error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+app.get('/api/quotation/all', async (req, res) => {
+  console.log('List quotations request');
+
+  try {
+    const target = EXTERNAL_QUOTATION_LIST_URL; // e.g., https://backend/api/quotations
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_QUOTATION_LIST_URL not set' });
+    }
+
+    const headers = { 'Accept': 'application/json' };
+
+    // forward authorization header if client provided a bearer token
+    if (req.headers && req.headers.authorization) {
+      headers.authorization = req.headers.authorization;
+    }
+
+    // allow inserting a BFF API key for outbound requests
+    if (process.env.BFF_API_KEY) {    headers['x-api-key'] = process.env.BFF_API_KEY;
+    }
+
+    const resp = await fetch(target, {
+      method: 'GET',
+      headers
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+
+    if (ct.includes('application/json')) {
+      body = await resp.json().catch(() => null);
+    } else {
+      body = await resp.text().catch(() => null);
+    }
+
+    if (!resp.ok) {
+      console.error('External quotation API error', resp.status, body);
+      return res.status(resp.status).json({
+        message: (body && body.message) || body || 'external quotation service error',
+        details: body
+      });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/quotations error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+app.delete('/api/quotation/:id', async (req, res) => {
+  console.log('Delete quotation request for ID:', req.params.id);
+
+  try {
+    const target = `${EXTERNAL_QUOTATION_DELETE_URL}/${req.params.id}`;
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_QUOTATION_DELETE_URL not set' });
+    }
+
+    const headers = { 'Accept': 'application/json' };
+    // forward authorization header if client provided a bearer token
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    // allow inserting a BFF API key for outbound requests
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'DELETE',
+      headers,
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External quotation API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external quotation service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/quotation/:id DELETE error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+app.get('/api/quotation/:id/download', async (req, res) => {
+  console.log('Download quotation request for ID:', req.params.id);
+
+  try {
+    const target = `${EXTERNAL_QUOTATION_DOWNLOAD_URL}`.replace('{id}', req.params.id);
+    
+    if (!EXTERNAL_QUOTATION_DOWNLOAD_URL) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_QUOTATION_DOWNLOAD_URL not set' });
+    }
+
+    const headers = { 'Accept': 'application/pdf' };
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, { method: 'GET', headers });
+
+    // Handle API errors before processing the body
+    if (!resp.ok) {
+      const errorBody = await resp.text();
+      console.error('External quotation download API error', resp.status, errorBody);
+      return res.status(resp.status).json({ message: 'External service error', details: errorBody });
+    }
+
+    // Get the actual binary data from the response
+    const body = await resp.buffer();
+
+    // Set appropriate headers for the real PDF
+    res.setHeader('Content-Disposition', `attachment; filename="${req.params.id}.pdf"`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', body.length);
+
+    // Send the actual binary buffer
+    res.send(body);
+
+  } catch (err) {
+    console.error('BFF /api/quotation/:id/download GET error', err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });

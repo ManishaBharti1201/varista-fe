@@ -5,12 +5,12 @@ import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
 
 interface QuotationRow {
-  quotationId: string;
+  id: string;
   quotationNo: string;
-  client: string;
+  customerName: string;
   amount: string;
   status: string;
-  due: string;
+  creationDate: string;
 }
 
 export default function QuotationList() {
@@ -50,7 +50,7 @@ export default function QuotationList() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(r =>
-        getCompanyName(r.client).toLowerCase().includes(term) ||
+        r.customerName.toLowerCase().includes(term) ||
         r.quotationNo.toLowerCase().includes(term)
       );
     }
@@ -88,12 +88,12 @@ export default function QuotationList() {
     };
 
     return {
-      quotationId: inv.quotationId,
+      id: inv.id,
       quotationNo: inv.quotationNo || `INV-${inv.id}`,
-      client: inv.buyer?.id || inv.buyerId || 'Unknown',
+      customerName: inv.customerName || 'Unknown Customer',
       amount: `₹ ${inv.totalAmount?.toLocaleString() || '0'}`,
       status: inv.status || 'Pending',
-      due: formatDate(inv.dated)
+      creationDate: formatDate(inv.creationDate)
     };
   };
 
@@ -117,16 +117,16 @@ export default function QuotationList() {
       const resp = await fetch(`${endpoints.quotationDelete(undefined, quotationId)}`, { method: 'DELETE' });
       if (!resp.ok) throw new Error(`Delete failed`);
       showToast('Quotation deleted successfully', 'success');
-      setRows(prev => prev.filter(r => r.quotationId !== quotationId));
+      setRows(prev => prev.filter(r => r.id !== quotationId));
     } catch (err) {
       console.error('Delete error', err);
       showToast('Failed to delete quotation', 'error');
     }
   };
 
-  const downloadQuotation = async (quotationNo: string) => {
+  const downloadQuotation = async (quotationId: string) => {
     try {
-      const response = await fetch(endpoints.quotationDownload(undefined, quotationNo), {
+      const response = await fetch(endpoints.quotationDownload(undefined, quotationId), {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -140,7 +140,7 @@ export default function QuotationList() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.setAttribute('download', `${quotationNo}.pdf`);
+      link.setAttribute('download', `${quotationId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -201,15 +201,15 @@ export default function QuotationList() {
             <table className="w-full">
               <thead className="sticky top-0 bg-white z-10 shadow-sm">
                 <tr className="border-b border-slate-200">
-                  <th onClick={() => handleSort('client')} className="cursor-pointer text-left py-3 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                    <div className="flex items-center gap-1">Client / Quotation # {sortConfig?.key === 'client' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}</div>
+                  <th onClick={() => handleSort('customerName')} className="cursor-pointer text-left py-3 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                    <div className="flex items-center gap-1">Client / Quotation # {sortConfig?.key === 'customerName' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}</div>
                   </th>
                   <th onClick={() => handleSort('amount')} className="cursor-pointer text-left py-3 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
                     <div className="flex items-center gap-1">Amount {sortConfig?.key === 'amount' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}</div>
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Status</th>
-                  <th onClick={() => handleSort('due')} className="cursor-pointer text-left py-3 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                    <div className="flex items-center gap-1">Date {sortConfig?.key === 'due' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}</div>
+                  <th onClick={() => handleSort('creationDate')} className="cursor-pointer text-left py-3 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                    <div className="flex items-center gap-1">Date {sortConfig?.key === 'creationDate' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}</div>
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Action</th>
                 </tr>
@@ -217,9 +217,9 @@ export default function QuotationList() {
 
               <tbody>
                 {!loading && filteredAndSortedRows.map((r) => (
-                  <tr key={r.quotationId} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="py-4 px-4">
-                      <p className="text-sm font-semibold text-gray-900">{getCompanyName(r.client)}</p>
+                      <p className="text-sm font-semibold text-gray-900">{r.customerName}</p>
                       <p className="text-xs text-gray-500">#{r.quotationNo}</p>
                     </td>
                     <td className="py-4 px-4">
@@ -230,18 +230,18 @@ export default function QuotationList() {
                         {r.status}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-sm text-gray-600">{r.due}</td>
+                    <td className="py-4 px-4 text-sm text-gray-600">{r.creationDate}</td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => downloadQuotation(r.quotationNo)}
+                          onClick={() => downloadQuotation(r.id)}
                           className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-blue-100 hover:text-blue-600 transition-colors"
                           title="Download PDF"
                         >
                           <Download className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => deleteQuotation(r.quotationId)}
+                          onClick={() => deleteQuotation(r.id)}
                           className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors"
                           title="Delete Quotation"
                         >
