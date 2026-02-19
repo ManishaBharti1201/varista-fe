@@ -65,10 +65,12 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
+      if (!res.ok) throw new Error('Failed to create employee');
       const data = await res.json();
       data.color = payload.color;
       data.avatar = payload.avatar;
-      data.createdAt = payload.createdAt;
+      data.joiningDate = payload.createdAt;
       set(state => ({ employees: [...state.employees, data], loading: false }));
       
     } catch (err) {
@@ -100,11 +102,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
 
     const formatDate = (createdAt: string) => {
       const date = new Date(createdAt);
-      return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
     const updated = employees.map(c => ({

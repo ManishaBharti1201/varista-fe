@@ -4,17 +4,21 @@ import Sidebar from './Sidebar';
 import { Menu, Search } from 'lucide-react';
 import { logout as authLogout } from '../utils/auth';
 import { Bell, Moon, User } from 'lucide-react';
+import { useUserStore } from '../store/UserStore'; 
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const userName = (typeof window !== 'undefined' && localStorage.getItem('userName')) || 'John Admin';
+  const { user, loading } = useUserStore();
+  const userName = user?.firstName + ' ' + user?.lastName || '';
   const initials = userName
     .split(' ')
     .map((n) => n[0])
     .slice(0, 2)
     .join('')
     .toUpperCase();
+
+
 
   const handleLogout = () => {
     try {
@@ -32,8 +36,6 @@ export default function Layout() {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         handleLogout={handleLogout}
-        initials={initials}
-        userName={userName}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -70,7 +72,8 @@ export default function Layout() {
               </button>
               <button className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                 <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs font-semibold">JA</span>
+                  {/* <span className="text-white text-xs font-semibold">{initials}</span> */}
+                  <img src={user?.avatar} alt="avatar" className="w-6 h-6 rounded-full" />
                 </div>
               </button>
             </div>

@@ -7,7 +7,13 @@ const app = express();
 const port = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+// REMOVE THIS LINE:
+// app.use(express.json()); 
+
+// KEEP THESE:
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
 // Service domain configuration (replaceable via .env)
 // Frontend (origin) - allowed CORS origin
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
@@ -17,6 +23,12 @@ const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://
 // Default to common API path; override with EXTERNAL_AUTH_PATH or EXTERNAL_AUTH_URL in .env
 const EXTERNAL_AUTH_PATH = '/user/login';
 const EXTERNAL_AUTH_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_AUTH_PATH}`;
+
+const EXTERNAL_RESET_PASSWORD_PATH = '/user/resetPassword/{email}';
+const EXTERNAL_RESET_PASSWORD_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_RESET_PASSWORD_PATH}`;
+
+const EXTERNAL_USER_UPDATE_PATH = '/user/update';
+const EXTERNAL_USER_UPDATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_USER_UPDATE_PATH}`;
 
 // External companies endpoint (can be overridden)
 const EXTERNAL_COMPANY_LIST_PATH = '/company/all';
@@ -37,6 +49,9 @@ const EXTERNAL_INVOICE_DELETE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_
 
 const EXTERNAL_INVOICE_DOWNLOAD_PATH = '/invoice/{id}/download';
 const EXTERNAL_INVOICE_DOWNLOAD_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_DOWNLOAD_PATH}`;
+
+const EXTERNAL_INVOICE_MARKASPAID_PATH = '/invoice/{id}/mark-as-paid';
+const EXTERNAL_INVOICE_MARKASPAID_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_MARKASPAID_PATH}`;
 
 const EXTERNAL_EMPLOYEE_CREATE_PATH = '/employee/create';
 const EXTERNAL_EMPLOYEE_CREATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_EMPLOYEE_CREATE_PATH}`;
@@ -85,42 +100,120 @@ console.log(' EXTERNAL_INVOICE_DELETE_URL:', EXTERNAL_INVOICE_DELETE_URL);
 
 // Login endpoint - forwards to external auth service and normalizes response
 app.post('/api/login', async (req, res) => {
-  console.log('Login request');
   const { username, password } = req.body || {};
+
   if (!username || !password) {
-    return res.status(400).json({ message: 'username and password are required' });
+    return res.status(400).json({ message: 'Username and password are required' });
   }
 
   try {
-
-    if (!EXTERNAL_AUTH_URL) {
-      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_AUTH_URL not set' });
-    }
-
-    // Forward the login request to the external backend service's login endpoint
-    // EXTERNAL_AUTH_URL defaults to https://service.coresmith.duckdns.org/login but can be
-    // overridden using EXTERNAL_AUTH_URL or EXTERNAL_SERVICE_BASE/EXTERNAL_AUTH_PATH in .env
     const resp = await fetch(EXTERNAL_AUTH_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
 
+    const body = await resp.json().catch(() => ({}));
+
+    if (!resp.ok || body.status === 'FAILURE') {
+      return res.status(resp.status || 401).json({
+        message: body?.message || 'Authentication failed'
+      });
+    }
+
+    // --- Normalization based on your specific JSON ---
+    const responsePayload = {
+      user: {
+        id: body.userId,
+        name: body.userName,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        role: body.role,
+        company: {
+          id: body.companyId,
+          name: body.companyName
+        },
+        email: body.email,
+        phone: body.phone,
+        avatar: body.avatar 
+      },
+      auth: {
+        token: body.token,
+        tokenType: body.tokenType,
+        expiresAt: body.tokenExpiryTs,
+        refreshToken: body.refreshToken,
+        refreshExpiresAt: body.refreshTokenExpiryTs
+      },
+      loginTime: body.login_ts,
+      raw: body // Optional: for debugging
+    };
+
+    return res.json(responsePayload);
+  } catch (err) {
+    console.error('BFF Login Error:', err);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+app.put('/api/user/update', async (req, res) => {
+  // 1. Debug: Check what the BFF actually received from the UI
+  console.log('BFF received body:');
+  
+  const userPayload = req.body.user || req.body; // Fallback if 'user' key is missing
+
+  try {
+    const resp = await fetch(EXTERNAL_USER_UPDATE_URL, {
+      method: 'PUT',
+      headers: req.headers,
+      body: JSON.stringify(userPayload),
+    });
+
+    // 2. Get response as text first to avoid "Unexpected end of JSON"
+    const text = await resp.text(); 
+    
+    // 3. Only parse if there is actually content
+    const data = text ? JSON.parse(text) : { success: true };
+
+    if (!resp.ok) {
+      return res.status(resp.status).json(data);
+    }
+
+    return res.json(data);
+  } catch (err) {
+    console.error('BFF /api/user/update error:', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+app.post('/api/resetPassword/:email', async (req, res) => {
+  console.log('Reset password request for ' + req.params.email);
+
+  const email = req.params.email;
+  try {
+
+    if (!EXTERNAL_AUTH_URL) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_AUTH_URL not set' });
+    }
+
+    const target = EXTERNAL_RESET_PASSWORD_URL.replace('{email}', email);
+
+    // Forward the login request to the external backend service's login endpoint
+    // EXTERNAL_AUTH_URL defaults to https://service.coresmith.duckdns.org/login but can be
+    // overridden using EXTERNAL_AUTH_URL or EXTERNAL_SERVICE_BASE/EXTERNAL_AUTH_PATH in .env
+    const resp = await fetch(target, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) {
-      return res.status(resp.status).json({ message: body?.message || 'Authentication failed', details: body });
+      return res.status(resp.status).json({ message: body?.message || 'Reset password failed', details: body });
     }
-
-    // Normalize user data: many auth APIs return token + user object in different shapes
-    // Try common locations for user data
-    const user = body?.user || body?.data || body;
-    const name = user?.name || user?.fullName || username;
-    const token = user?.token || body?.token || body?.accessToken || null;
 
     return res.json({ name, token, raw: body });
   } catch (err) {
-    console.error('BFF /api/login error', err);
+    console.error('BFF /api/resetPassword error', err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });
@@ -356,7 +449,7 @@ app.get('/api/invoice/:id/download', async (req, res) => {
 
   try {
     const target = `${EXTERNAL_INVOICE_DOWNLOAD_URL}`.replace('{id}', req.params.id);
-    
+
     if (!EXTERNAL_INVOICE_DOWNLOAD_URL) {
       return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_INVOICE_DOWNLOAD_URL not set' });
     }
@@ -375,7 +468,7 @@ app.get('/api/invoice/:id/download', async (req, res) => {
     }
 
     // Get the actual binary data from the response
-    const body = await resp.buffer(); 
+    const body = await resp.buffer();
 
     // Set appropriate headers for the real PDF
     res.setHeader('Content-Disposition', `attachment; filename="${req.params.id}.pdf"`);
@@ -453,7 +546,8 @@ app.get('/api/employee/all', async (req, res) => {
     }
 
     // allow inserting a BFF API key for outbound requests
-    if (process.env.BFF_API_KEY) {      headers['x-api-key'] = process.env.BFF_API_KEY;
+    if (process.env.BFF_API_KEY) {
+      headers['x-api-key'] = process.env.BFF_API_KEY;
     }
 
     const resp = await fetch(target, {
@@ -499,7 +593,7 @@ app.delete('/api/employee/:id', async (req, res) => {
     // forward authorization header if client provided a bearer token
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     // allow inserting a BFF API key for outbound requests
-    if (process.env.BFF_API_KEY) headers  ['x-api-key'] = process.env.BFF_API_KEY;
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
     const resp = await fetch(target, {
       method: 'DELETE',
@@ -583,7 +677,8 @@ app.get('/api/quotation/all', async (req, res) => {
     }
 
     // allow inserting a BFF API key for outbound requests
-    if (process.env.BFF_API_KEY) {    headers['x-api-key'] = process.env.BFF_API_KEY;
+    if (process.env.BFF_API_KEY) {
+      headers['x-api-key'] = process.env.BFF_API_KEY;
     }
 
     const resp = await fetch(target, {
@@ -657,7 +752,7 @@ app.get('/api/quotation/:id/download', async (req, res) => {
 
   try {
     const target = `${EXTERNAL_QUOTATION_DOWNLOAD_URL}`.replace('{id}', req.params.id);
-    
+
     if (!EXTERNAL_QUOTATION_DOWNLOAD_URL) {
       return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_QUOTATION_DOWNLOAD_URL not set' });
     }
@@ -688,6 +783,41 @@ app.get('/api/quotation/:id/download', async (req, res) => {
 
   } catch (err) {
     console.error('BFF /api/quotation/:id/download GET error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+app.get('/api/invoice/:id/mark-as-paid', async (req, res) => {
+  console.log('Mark invoice as paid request for ID:', req.params.id);
+
+  try {
+    const target = `${EXTERNAL_INVOICE_MARKASPAID_URL}`.replace('{id}', req.params.id); // e.g., https://backend/api/invoice/{id}
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_INVOICE_MARKASPAID_URL not set' });
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'GET',
+      headers,
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External invoice API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external invoice service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/invoice/:id/update error', err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });

@@ -14,13 +14,25 @@ import QuotationList from './pages/quotation/QuotationList';
 import QuotationCreate from './pages/quotation/QuotationCreate';
 import QuotationMgmt from './pages/QuotationMgmt';
 import EmployeeMgmt from './pages/EmployeeMgmt';
+import UserMgmt from './pages/UserMgmt';
+import { useUserStore } from './store/UserStore';
 
 const App: React.FC = () => {
   const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-    const ok = isTokenValid();
-    if (ok) return children;
-    // clear any stale auth and redirect to login
-    try { logout(); } catch (e) { /* ignore */ }
+    // Use the state from your store instead of a standalone utility
+    const { user, loading } = useUserStore.getState();
+    const tokenExists = !!localStorage.getItem('token'); // or your specific key
+
+    // If the store is still processing the login, show a loader
+    if (loading) return <div>Loading...</div>;
+
+    // Check both the store state and the persistent token
+    if (user || tokenExists) {
+      return children;
+    }
+
+    // Only logout and redirect if we are sure there is no user
+    try { logout(); } catch (e) { }
     return <Navigate to="/login" replace />;
   };
 
@@ -41,6 +53,7 @@ const App: React.FC = () => {
           </Route>
           <Route path="/employees" element={<EmployeeMgmt />} />
           <Route path="/quicklinks" element={<QuickLinks />} />
+          <Route path="/admin/users" element={<UserMgmt />} />
         </Route>
       </Routes>
     </Router>

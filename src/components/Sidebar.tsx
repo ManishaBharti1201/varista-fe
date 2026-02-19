@@ -10,13 +10,12 @@ import {
   LogOut,
   Link,
 } from "lucide-react";
+import { useUserStore } from "../store/UserStore";
 
 interface Props {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (b: boolean) => void;
   handleLogout: () => void;
-  initials: string;
-  userName: string;
 }
 
 const menuItems = [
@@ -37,9 +36,13 @@ export default function Sidebar({
   isSidebarOpen,
   setIsSidebarOpen,
   handleLogout,
-  initials,
-  userName,
 }: Props) {
+
+  const { user } = useUserStore();
+  const avatar= user?.avatar ;
+
+  const userName = user?.firstName + ' ' + user?.lastName || '';
+
   return (
     <div
       className={`w-64 bg-white border-r border-gray-200 flex flex-col fixed inset-y-0 left-0 z-40 transform lg:static lg:translate-x-0 transition-transform duration-200 ${
@@ -63,7 +66,8 @@ export default function Sidebar({
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-lg">{initials}</span>
+            {/* <span className="text-white font-bold text-lg">{initials}</span> */}
+            <img src={avatar} alt="avatar" className="w-12 h-12 rounded-full" />
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">{userName}</h3>
@@ -109,7 +113,7 @@ export default function Sidebar({
           <div className="mt-6">
             <div className="px-4 mb-2">
               <span className="text-xs font-semibold text-gray-400 uppercase">
-                Admin
+                {user?.role}
               </span>
             </div>
             <div className="space-y-1">

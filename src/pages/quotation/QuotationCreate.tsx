@@ -18,21 +18,23 @@ export default function QuotationCreate() {
   const { companies, fetchCompanies, loading } = useCompanyStore();
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 
-  const [Quotation, setQuotation] = useState<any>({
-    taxAmt: 0.0,
-    taxRate: '',
-    totalAmt: 0.0,
-    buyerId: 0,
+  const [quotation, setQuotation] = useState<any>({
+    id: '',
+    customerName: '',
+    customerEmail: '',
     items: [
       {
         description: "",
         hsnSac: "",
         quantity: "",
         rate: "",
-        unit: "Pcs",
+        unit: "mandays",
         amount: "",
       }
     ],
+    taxAmount: 0.0,
+    totalAmount: 0.0,
+    creationDate: '',
   });
 
   const [errors, setErrors] = useState<any>({});
@@ -72,8 +74,8 @@ export default function QuotationCreate() {
       const rate = parseFloat(newItems[index].rate) || 0;
       newItems[index].amount = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
 
-      const { taxAmount, totalAmount } = calculateTotals(newItems, prev.taxRate);
-      return { ...prev, items: newItems, taxAmount, totalAmt: totalAmount };
+      const { taxAmount, totalAmount } = calculateTotals(newItems, prev.taxRate || 0);
+      return { ...prev, items: newItems, taxAmount, totalAmount: totalAmount };
     });
 
     // Clear item-specific errors if they exist
@@ -93,7 +95,7 @@ export default function QuotationCreate() {
     const newRate = parseFloat(rate) || 0;
     setQuotation((prev: any) => {
       const { taxAmount, totalAmount } = calculateTotals(prev.items, newRate);
-      return { ...prev, taxRate: newRate, taxAmt: taxAmount, totalAmt: totalAmount };
+      return { ...prev, taxRate: newRate, taxAmount: taxAmount, totalAmount: totalAmount };
     });
   };
 
@@ -111,6 +113,7 @@ export default function QuotationCreate() {
 
   const submit = async () => {
     const validationErrors = validateForm();
+    quotation.creationDate = new Date().toISOString();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       showToast("Please fix the errors in the form", "error"); // Feedback on failed submit
@@ -121,12 +124,12 @@ export default function QuotationCreate() {
       const token = localStorage.getItem("token");
       const headers: any = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      console.log("Submitting Quotation", endpoints.quotationCreate(), headers, Quotation);
+      console.log("Submitting Quotation", endpoints.quotationCreate(), headers, quotation);
 
       const res = await fetch(endpoints.quotationCreate(), {
         method: "POST",
         headers,
-        body: JSON.stringify(Quotation),
+        body: JSON.stringify(quotation),
       });
 
       const ct = res.headers.get("content-type") || "";
@@ -156,15 +159,15 @@ export default function QuotationCreate() {
     const newErrors: any = {};
 
     // Buyer Validation
-    if (!Quotation.buyerId || Quotation.buyerId === 0) {
+    if (!quotation.buyerId || quotation.buyerId === 0) {
       newErrors.buyer = "Please select a client.";
     }
 
     // Items Validation
-    if (Quotation.items.length === 0) {
+    if (quotation.items.length === 0) {
       newErrors.items = "At least one item is required.";
     } else {
-      const itemErrors = Quotation.items.map((item: any) => {
+      const itemErrors = quotation.items.map((item: any) => {
         const errors: any = {};
         if (!item.description.trim()) errors.description = "Required";
         if (!item.hsnSac.trim()) errors.hsnSac = "Required";
@@ -186,10 +189,9 @@ export default function QuotationCreate() {
   const reset = () => {
     setErrors({});
     setQuotation({
-      taxAmt: 0.0,
-      taxRate: '',
-      totalAmt: 0.0,
-      buyerId: 0,
+      id: '',
+      customerName: '',
+      customerEmail: '',
       items: [
         {
           description: "",
@@ -197,9 +199,13 @@ export default function QuotationCreate() {
           quantity: "",
           rate: "",
           unit: "mandays",
-          amount: "",
+          amount: 0
         }
       ],
+      taxRate: 0.0,
+      taxAmount: 0.0,
+      totalAmount: 0.0,
+      creationDate: new Date().toISOString()
     });
     setSelected("Select Company");
   };
@@ -240,6 +246,7 @@ export default function QuotationCreate() {
                       key={client.id}
                       onClick={() => {
                         setSelected(client.name);
+                        updateField("customerName", client.name);
                         updateField("buyerId", client.id);
                         setIsOpen(false);
                       }}
@@ -279,7 +286,7 @@ export default function QuotationCreate() {
                   </tr>
                 </thead>
                 <tbody>
-                  {Quotation.items.map((it: any, idx: number) => (
+                  {quotation.items.map((it: any, idx: number) => (
                     <tr key={idx} className="border-b border-slate-100">
                       <td className="py-2 px-2">
                         <input
@@ -364,18 +371,18 @@ export default function QuotationCreate() {
                 Tax Rate
               </label>
               <input
-                value={Quotation.taxRate}
+                value={quotation.taxRate}
                 onChange={(e) => updateTaxRate(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 max-w-xs"
               />
             </div>
             <div>
               <label className="block text-xs text-slate-600">Total Tax Amount</label>
-              <h3 className="font-bold text-slate-800 text-lg">{Quotation.taxAmt}</h3>
+              <h3 className="font-bold text-slate-800 text-lg">{quotation.taxAmount}</h3>
             </div>
             <div>
               <label className="block text-xs text-slate-600">Final  Amount</label>
-              <h3 className="font-bold text-slate-800 text-lg">{Quotation.totalAmt}</h3>
+              <h3 className="font-bold text-slate-800 text-lg">{quotation.totalAmount}</h3>
             </div>
           </div>
 

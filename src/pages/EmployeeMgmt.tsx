@@ -44,10 +44,54 @@ export default function EmployeeMgmt() {
         role: '',
     });
 
+    //logic to accept only numbers and format as 1234-5678-9012 
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+        if (name === 'adhaar') {
+            // Only allow numbers and format as 1234-5678-9012
+            const numericValue = value.replace(/\D/g, '');
+            const limitedValue = numericValue.substring(0, 12); // Limit to 12 digits
+            let formattedValue = '';
+            for (let i = 0; i < limitedValue.length; i++) {
+                if (i > 0 && i % 4 === 0) formattedValue += '-';
+                formattedValue += limitedValue[i];
+            }
+            setFormData(prev => ({ ...prev, [name]: formattedValue }));
+        }
+        //logic to prevent entering non-numeric characters in phone field and format as 123-456-7890 with +91 country code
+        else if (name === 'phone') {
+            // Keep only digits
+            let numericValue = value.replace(/\D/g, '');
 
+            // Remove leading 91 if user types it manually
+            if (numericValue.startsWith("91")) {
+                numericValue = numericValue.substring(2);
+            }
+
+            // Limit to 10 digits
+            numericValue = numericValue.substring(0, 10);
+
+            // Format as XXXXX YYYYY
+            let formattedValue = "+91 ";
+
+            if (numericValue.length > 0) {
+                formattedValue += numericValue.substring(0, 5);
+            }
+            if (numericValue.length > 5) {
+                formattedValue += " " + numericValue.substring(5, 10);
+            }
+
+            setFormData(prev => ({ ...prev, [name]: formattedValue }));
+        }
+        //only allow letters and spaces in role field
+        else if (name === 'role') {
+            const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, '');
+            setFormData(prev => ({ ...prev, [name]: alphabeticValue }));
+        }
+        else {
             setFormData(prev => ({ ...prev, [name]: value }));
+        }
 
     };
 
@@ -82,7 +126,7 @@ export default function EmployeeMgmt() {
             phone: '',
             adhaar: '',
             role: '',
-            
+
         });
         setSubmitting(false);
     };
@@ -297,13 +341,16 @@ export default function EmployeeMgmt() {
                                         <input
                                             type="text"
                                             name="role"
+                                            value={formData.role}
                                             onChange={handleInputChange}
                                             required
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                                             placeholder="e.g., Software Engineer"
                                         />
                                     </div>
-                                    {/* GSTIN */}
+                                    {/* Adhaar */}
+
+
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Adhaar <span className="text-red-500">*</span>
@@ -311,6 +358,7 @@ export default function EmployeeMgmt() {
                                         <input
                                             type="text"
                                             name="adhaar"
+                                            value={formData.adhaar}
                                             onChange={handleInputChange}
                                             required
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
@@ -339,8 +387,7 @@ export default function EmployeeMgmt() {
                                             Phone <span className="text-red-500">*</span>
                                         </label>
                                         <input
-                                            type="text"
-                                            name="phone"
+                                            type="text" name="phone"
                                             value={formData.phone}
                                             onChange={handleInputChange}
                                             required

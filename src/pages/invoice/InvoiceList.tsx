@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Download, Trash2, ChevronUp, ChevronDown, FilterX } from 'lucide-react';
+import { Download, Trash2, ChevronUp, ChevronDown, FilterX, Check } from 'lucide-react';
 import { useCompanyStore } from '../../store/CompanyStore';
 import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
@@ -93,7 +93,7 @@ export default function InvoiceList() {
       invoiceNo: inv.invoiceNo || `INV-${inv.id}`,
       client: inv.buyer?.id || inv.buyerId || 'Unknown',
       amount: `₹ ${inv.totalAmount?.toLocaleString() || '0'}`,
-      status: inv.status || 'Pending',
+      status: inv.status ,
       due: formatDate(inv.dated)
     };
   };
@@ -152,6 +152,25 @@ export default function InvoiceList() {
     } catch (err) {
       console.error('Download error', err);
       showToast('Failed to download invoice', 'error');
+    }
+  };
+// add a pop-up to confirm marking as paid
+
+  const markAsPaid = async (invoiceId: string) => {
+    if (!window.confirm('Are you sure you want to mark this invoice as Paid?')) {
+      return;
+    }
+    try {
+      const resp = await fetch(endpoints.invoiceMarkAsPaid(undefined, invoiceId), {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!resp.ok) throw new Error(`Update failed`);
+      showToast('Invoice marked as Paid', 'success');
+      setRows(prev => prev.map(r => r.invoiceId === invoiceId ? { ...r, status: 'Paid' } : r));
+    } catch (err) {
+      console.error('Update error', err);
+      showToast('Failed to update invoice', 'error');
     }
   };
 
@@ -249,6 +268,15 @@ export default function InvoiceList() {
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
+                        {r.status !== 'Paid' && (
+                          <button
+                            onClick={() => markAsPaid(r.invoiceId)}
+                            className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-green-100 hover:text-green-600 transition-colors"
+                            title="Mark as Paid"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
