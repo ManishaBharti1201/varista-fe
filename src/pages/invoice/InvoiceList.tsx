@@ -4,6 +4,7 @@ import { useCompanyStore } from '../../store/CompanyStore';
 import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
 import { log } from 'util';
+import { apiRequest } from '../../utils/apiClient';
 
 interface InvoiceRow {
   invoiceId: string;
@@ -101,7 +102,7 @@ export default function InvoiceList() {
   const loadInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await fetch(endpoints.invoiceList());
+      const resp = await apiRequest(endpoints.invoiceList(), { method: 'GET' });
       if (!resp.ok) throw new Error(`Error: ${resp.status}`);
       const data = await resp.json();
       setRows(data.map(mapInvoice));
@@ -115,7 +116,7 @@ export default function InvoiceList() {
   const deleteInvoice = async (invoiceId: string) => {
 
     try {
-      const resp = await fetch(`${endpoints.invoiceDelete(undefined, invoiceId)}`, { method: 'DELETE' });
+      const resp = await apiRequest(`${endpoints.invoiceDelete(undefined, invoiceId)}`, { method: 'DELETE' });
       if (!resp.ok) throw new Error(`Delete failed`);
       showToast('Invoice deleted successfully', 'success');
       setRows(prev => prev.filter(r => r.invoiceId !== invoiceId));
@@ -128,7 +129,7 @@ export default function InvoiceList() {
   const downloadInvoice = async (invoiceId: string) => {
     try {
       console.log('Downloading invoice with ID:', invoiceId);
-      const response = await fetch(endpoints.invoiceDownload(undefined, invoiceId), {
+      const response = await apiRequest(`${endpoints.invoiceDownload(undefined, invoiceId)}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -161,7 +162,7 @@ export default function InvoiceList() {
       return;
     }
     try {
-      const resp = await fetch(endpoints.invoiceMarkAsPaid(undefined, invoiceId), {
+      const resp = await apiRequest(`${endpoints.invoiceMarkAsPaid(undefined, invoiceId)}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });

@@ -7,7 +7,7 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
   if (!isTokenValid()) {
     console.warn("Token expired or missing. Redirecting to login.");
     logout();
-    // Optional: window.location.href = '/login';
+    window.location.href = '/login';
     throw new Error("Session expired");
   }
 

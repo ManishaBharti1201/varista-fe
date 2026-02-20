@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { endpoints } from '../config/urls';
 import { get } from 'https';
+import { apiRequest } from '../utils/apiClient';
 
 export interface Employee {
   id: string;
@@ -39,7 +40,9 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   fetchEmployees: async () => {
     set({ loading: true });
     try {
-      const res = await fetch(endpoints.employeesList());
+      const res = await apiRequest(endpoints.employeesList(), {
+        method: 'GET',
+      });
       const data = await res.json();
       set({ employees: data, loading: false });
     } catch (err) {
@@ -60,7 +63,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
 
     set({ loading: true });
     try {
-      const res = await fetch(endpoints.employeeCreate(), {
+      const res = await apiRequest(endpoints.employeeCreate(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -119,9 +122,9 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     const { employees } = get();
     set({ loading: true });
     try {
-      await fetch(endpoints.employeeDelete(undefined, id), {
+      await apiRequest(endpoints.employeeDelete(undefined,id), {
         method: 'DELETE',
-      });
+      })
       const updatedEmployees = employees.filter(e => e.id !== id);
       set({ employees: updatedEmployees, loading: false });
     } catch (err) {

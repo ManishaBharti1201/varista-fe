@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { endpoints } from '../config/urls';
+import { apiRequest } from '../utils/apiClient';
 
 export interface Company {
   id: string;
@@ -40,7 +41,9 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
   fetchCompanies: async () => {
     set({ loading: true });
     try {
-      const res = await fetch(endpoints.companiesList());
+     const res = await apiRequest(endpoints.companiesList(), {
+       method: 'GET',
+     });
       const data = await res.json();
       set({ companies: data, loading: false });
     } catch (err) {
@@ -61,7 +64,7 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
 
     set({ loading: true });
     try {
-      const res = await fetch(endpoints.companyCreate(), {
+      const res = await apiRequest(endpoints.companyCreate(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

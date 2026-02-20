@@ -408,6 +408,7 @@ app.get('/api/invoice/all', async (req, res) => {
 //Delete invoice - forward to external invoices API
 app.delete('/api/invoice/:id', async (req, res) => {
   console.log('Delete invoice request for ID:', req.params.id);
+  
 
   try {
     const target = `${EXTERNAL_INVOICE_DELETE_URL}/${req.params.id}`;
@@ -415,30 +416,27 @@ app.delete('/api/invoice/:id', async (req, res) => {
       return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_INVOICE_DELETE_URL not set' });
     }
 
-    const headers = { 'Accept': 'application/json' };
-    // forward authorization header if client provided a bearer token
+    const headers = { 'Accept': 'application/pdf' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
-    // allow inserting a BFF API key for outbound requests
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    const resp = await fetch(target, {
-      method: 'DELETE',
-      headers,
-    });
+    const resp = await fetch(target, { method: 'DELETE', headers });
+
+    // Handle API errors before processing the body
+    if (!resp.ok) {
+      const errorBody = await resp.text();
+      console.error('External invoice delete API error', resp.status, errorBody);
+      return res.status(resp.status).json({ message: 'External service error', details: errorBody });
+    }
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;
     if (ct.includes('application/json')) body = await resp.json().catch(() => null);
     else body = await resp.text().catch(() => null);
 
-    if (!resp.ok) {
-      console.error('External invoice API error', resp.status, body);
-      return res.status(resp.status).json({ message: (body && body.message) || body || 'external invoice service error', details: body });
-    }
-
     return res.status(resp.status).json(body);
   } catch (err) {
-    console.error('BFF /api/invoice/:id DELETE error', err);
+    console.error('BFF /api/invoice/:id error', err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });

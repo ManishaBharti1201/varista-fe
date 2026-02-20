@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Toast } from "../components/Toast";
 import { useUserStore } from "../store/UserStore";
+import { apiRequest } from "../utils/apiClient";
 
 export default function LoginRegister() {
   const [submitting, setSubmitting] = useState(false);
@@ -117,7 +118,7 @@ const handleSubmit = async () => {
         console.info("Password reset in progress " + formData.email);
         // Use centralized endpoint builder      
 
-        const res = await fetch(`${endpoints.resetPassword(undefined, formData.email)}`, {
+        const res = await apiRequest(endpoints.resetPassword(undefined, formData.email), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: formData.email }),

@@ -3,6 +3,7 @@ import { Download, Trash2, ChevronUp, ChevronDown, FilterX } from 'lucide-react'
 import { useCompanyStore } from '../../store/CompanyStore';
 import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
+import { apiRequest } from '../../utils/apiClient';
 
 interface QuotationRow {
   id: string;
@@ -100,7 +101,7 @@ export default function QuotationList() {
   const loadQuotations = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await fetch(endpoints.quotationList());
+      const resp = await apiRequest(endpoints.quotationList(), { method: 'GET' });
       if (!resp.ok) throw new Error(`Error: ${resp.status}`);
       const data = await resp.json();
       setRows(data.map(mapQuotation));
@@ -114,7 +115,7 @@ export default function QuotationList() {
   const deleteQuotation = async (quotationId: string) => {
 
     try {
-      const resp = await fetch(`${endpoints.quotationDelete(undefined, quotationId)}`, { method: 'DELETE' });
+      const resp = await apiRequest(endpoints.quotationDelete(undefined, quotationId), { method: 'DELETE' });
       if (!resp.ok) throw new Error(`Delete failed`);
       showToast('Quotation deleted successfully', 'success');
       setRows(prev => prev.filter(r => r.id !== quotationId));
@@ -126,7 +127,7 @@ export default function QuotationList() {
 
   const downloadQuotation = async (quotationId: string) => {
     try {
-      const response = await fetch(endpoints.quotationDownload(undefined, quotationId), {
+      const response = await apiRequest(`${endpoints.quotationDownload(undefined, quotationId)}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

@@ -5,6 +5,7 @@ import { endpoints } from '../../config/urls';
 import { ChevronDown } from "lucide-react";
 import { useCompanyStore } from "../../store/CompanyStore";
 import { Toast } from "../../components/Toast";
+import { apiRequest } from "../../utils/apiClient";
 
 export default function QuotationCreate() {
   console.log("Provider rendering");
@@ -126,7 +127,7 @@ export default function QuotationCreate() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
       console.log("Submitting Quotation", endpoints.quotationCreate(), headers, quotation);
 
-      const res = await fetch(endpoints.quotationCreate(), {
+      const res = await apiRequest(endpoints.quotationCreate(), {
         method: "POST",
         headers,
         body: JSON.stringify(quotation),

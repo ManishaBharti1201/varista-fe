@@ -5,6 +5,7 @@ import { endpoints, bffBase } from '../../config/urls';
 import { ChevronDown } from "lucide-react";
 import { useCompanyStore } from "../../store/CompanyStore";
 import { Toast } from "../../components/Toast";
+import { apiRequest } from "../../utils/apiClient";
 
 export default function InvoiceCreate() {
   console.log("Provider rendering");
@@ -123,7 +124,7 @@ export default function InvoiceCreate() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
       console.log("Submitting invoice", endpoints.invoiceCreate(), headers, invoice);
 
-      const res = await fetch(endpoints.invoiceCreate(), {
+      const res = await apiRequest(endpoints.invoiceCreate(), {
         method: "POST",
         headers,
         body: JSON.stringify(invoice),
