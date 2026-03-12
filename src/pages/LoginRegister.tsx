@@ -1,18 +1,9 @@
-import React, { use, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { saveAuthFromResponse } from '../utils/auth';
 import { endpoints } from '../config/urls';
 import {
-  Mail,
-  Lock,
-  User,
-  Building2,
-  Phone,
-  Eye,
-  EyeOff,
-  FileText,
-  CheckCircle2,
-  AlertCircle,
+  Mail, Lock, Eye, EyeOff, FileText, CheckCircle2,
+  AlertCircle, ShieldCheck, Zap, BarChart3, Fingerprint
 } from "lucide-react";
 import { Toast } from "../components/Toast";
 import { useUserStore } from "../store/UserStore";
@@ -25,344 +16,187 @@ export default function LoginRegister() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    fullName: "",
-    company: "",
-    phone: "",
-    confirmPassword: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  
+  const navigate = useNavigate();
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
   };
 
-  const navigate = useNavigate();
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
-
+    if (!formData.email) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email is invalid";
+    if (!formData.password) newErrors.password = "Password is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-const handleSubmit = async () => {
-  // 1. Pre-flight checks
-  if (!validateForm()) return;
-
-  setSubmitting(true);
-
-  const loginInfo = {
-    username: formData.email,
-    password: formData.password,
-  };
-
-  try {
-    // 2. Wait for the store to finish updating
-    await login(loginInfo);
-    
-    console.log('Login successful, navigating...');
-    
-    // 3. Navigate BEFORE setting submitting to false 
-    // (or just let the redirect unmount the component)
-    navigate('/', { replace: true }); 
-  } catch (error) {
-    console.error('Login error', error);
-    showToast('An error occurred while logging in. Please try again.', 'error');
-    setSubmitting(false); // Only reset if there's an error
-  }
-};
-
-  const rememberMe = (value: boolean) => {
-    if (!value) localStorage.removeItem('rememberMe');
-    else localStorage.setItem('rememberMe', 'true');
-  };
-
-  // send an email upon password reset window
-
-  const handleResetPassword = () => {
-
-    const doResetPassword = async () => {
-      setSubmitting(true);
-
-      if (!formData.email) {
-        showToast("Please enter email", "error");
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    setSubmitting(true);
+    try {
+      const response = await login({ username: formData.email, password: formData.password });
+      if (!response) {
+        showToast('Login failed', 'error');
+        setSubmitting(false);
         return;
       }
-      else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        showToast("Please enter valid email", "error");
-        return;
-      }
-
-
-      try {
-        console.info("Password reset in progress " + formData.email);
-        // Use centralized endpoint builder      
-
-        const res = await apiRequest(endpoints.resetPassword(undefined, formData.email), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.email }),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => null);
-          const msg = err?.message || 'Reset failed';
-          showToast(msg, 'error');
-          return;
-        }
-        showToast("Check your email for the Password", "success");
-
-        navigate('/');
-      } catch (error) {
-        console.error('Reset error', error);
-        showToast('An error occurred while resetting in. Please try again.', 'error');
-      }
-    };
-
-    doResetPassword();
-    setSubmitting(false);
+      navigate('/', { replace: true });
+    } catch (error) {
+      setSubmitting(false);
+      showToast('Invalid credentials', 'error');
+    }
   };
 
   return (
-    <>
-      <div className="flex min-h-screen bg-gray-50">
-        {/* Left Side - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 p-12 flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-12">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
-                <FileText className="w-7 h-7 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="font-bold text-2xl text-white">HRMS</h1>
-                <p className="text-sm text-blue-100">Portal</p>
-              </div>
+    <div className="flex min-h-screen bg-white">
+      {/* 1. LEFT SIDE - BRANDING & FEATURE SHOWCASE */}
+      <div className="hidden lg:flex lg:w-[55%] bg-[#1A233A] p-16 flex-col justify-between relative overflow-hidden">
+        {/* Decorative Abstract Shapes */}
+        <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-[-5%] left-[-5%] w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl"></div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-4 mb-20">
+            <div className="w-14 h-14 bg-white rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-indigo-900/40">
+              <FileText className="w-8 h-8 text-[#1A233A]" />
             </div>
-
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-4xl font-bold text-white mb-4">
-                  Streamline Your HR Operations
-                </h2>
-                <p className="text-lg text-blue-100 leading-relaxed">
-                  Manage employees, payroll, attendance, and more with our
-                  comprehensive HRMS platform.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 p-1 bg-white/20 rounded-lg">
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white mb-1">
-                      Employee Management
-                    </h3>
-                    <p className="text-sm text-blue-100">
-                      Complete employee lifecycle management
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 p-1 bg-white/20 rounded-lg">
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white mb-1">
-                      Attendance Tracking
-                    </h3>
-                    <p className="text-sm text-blue-100">
-                      GPS-enabled attendance with real-time tracking
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 p-1 bg-white/20 rounded-lg">
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white mb-1">
-                      Payroll Processing
-                    </h3>
-                    <p className="text-sm text-blue-100">
-                      Automated payroll with detailed breakdowns
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 p-1 bg-white/20 rounded-lg">
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white mb-1">
-                      Analytics & Reports
-                    </h3>
-                    <p className="text-sm text-blue-100">
-                      Comprehensive insights and data visualization
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div>
+              <h1 className="font-black text-3xl text-white tracking-tight uppercase">Syncra</h1>
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Workforce Hub</p>
             </div>
           </div>
 
-          <div className="text-sm text-blue-100">
-            © 2024 HRMS Portal. All rights reserved.
+          <div className="max-w-xl">
+            <h2 className="text-5xl font-black text-white leading-tight mb-8 tracking-tighter">
+              Precision <span className="text-indigo-400">Workforce</span> Management.
+            </h2>
+            
+            <div className="grid grid-cols-1 gap-8 mt-12">
+              {[
+                { title: "Muster Tracking", desc: "GPS-verified real-time attendance.", icon: Zap, color: "text-amber-400" },
+                { title: "Automated Payroll", desc: "Error-free NH and OT calculations.", icon: BarChart3, color: "text-emerald-400" },
+                { title: "Bank-Grade Security", desc: "Token-based encryption & encrypted avatars.", icon: ShieldCheck, color: "text-indigo-400" }
+              ].map((item, i) => (
+                <div key={i} className="flex gap-5 group">
+                  <div className="mt-1 p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-white/10 transition-colors">
+                    <item.icon className={`w-6 h-6 ${item.color}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm text-white uppercase tracking-widest">{item.title}</h3>
+                    <p className="text-slate-400 text-sm font-medium mt-1">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Right Side - Form */}
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="w-full max-w-md">
-            {/* Mobile Logo */}
-            <div className="lg:hidden flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <FileText className="w-6 h-6 text-white" />
+        <div className="relative z-10 text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-4">
+          <span>v3.0.4 Stable Build</span>
+          <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
+          <span>© 2026 Syncra Systems</span>
+        </div>
+      </div>
+
+      {/* 2. RIGHT SIDE - LOGIN FORM */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-[#F8FAFC]">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo Only */}
+          <div className="lg:hidden flex items-center gap-3 mb-12">
+            <div className="w-12 h-12 bg-[#1A233A] rounded-2xl flex items-center justify-center">
+              <FileText className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="font-black text-xl text-gray-900 tracking-tight uppercase">Syncra</h1>
+          </div>
+
+          <div className="mb-10 text-center lg:text-left">
+            <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">Access Portal</h2>
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Identify yourself to continue</p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Email Field */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Corporate Email</label>
+              <div className="relative group">
+                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="admin@syncra.hub"
+                  className={`w-full pl-14 pr-6 py-4 bg-white border-2 rounded-[1.5rem] font-bold text-sm transition-all outline-none 
+                    ${errors.email ? "border-rose-100 bg-rose-50/30 text-rose-600" : "border-slate-100 focus:border-indigo-500/20 focus:ring-4 focus:ring-indigo-500/5 text-slate-900"}`}
+                />
               </div>
-              <div>
-                <h1 className="font-bold text-lg text-gray-900">HRMS</h1>
-                <p className="text-xs text-gray-500">Portal</p>
+              {errors.email && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-2 px-2 mt-1"><AlertCircle size={12}/> {errors.email}</p>}
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Access Key</label>
+              <div className="relative group">
+                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className={`w-full pl-14 pr-14 py-4 bg-white border-2 rounded-[1.5rem] font-bold text-sm transition-all outline-none 
+                    ${errors.password ? "border-rose-100 bg-rose-50/30 text-rose-600" : "border-slate-100 focus:border-indigo-500/20 focus:ring-4 focus:ring-indigo-500/5 text-slate-900"}`}
+                />
+                <button
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
             </div>
 
-            {/* Form Header */}
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome Back!
-              </h2>
-              <p className="text-gray-600">
-                Sign in to access your HRMS dashboard
-
-              </p>
+            <div className="flex items-center justify-between px-2 pt-2">
+              <label className="flex items-center cursor-pointer group">
+                <input type="checkbox" className="w-5 h-5 rounded-lg border-2 border-slate-200 text-indigo-600 focus:ring-indigo-500/20 transition-all cursor-pointer" />
+                <span className="ml-3 text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">Keep Session</span>
+              </label>
+              <button className="text-[11px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest">Reset Key</button>
             </div>
 
-            {/* Form */}
-            <div className="space-y-5">
-              {/* Register Fields */}
-
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Enter your email"
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email ? "border-red-500" : "border-gray-300"
-                      }`}
-                  />
-                </div>
-                {errors.email && (
-                  <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>{errors.email}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Enter your password"
-                    className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.password ? "border-red-500" : "border-gray-300"
-                      }`}
-                  />
-                  <button
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
-                  <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>{errors.password}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Remember Me / Forgot Password */}
-              {(
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      onChange={(e) => rememberMe(e.target.checked)}
-                    />
-                    <span className="ml-2 text-sm text-gray-600">
-                      Remember me
-                    </span>
-                  </label>
-                  <button className="text-sm text-blue-600 hover:text-blue-700 font-medium" onClick={handleResetPassword}>
-                    Forgot Password?
-                  </button>
-                </div>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full bg-[#1A233A] hover:bg-[#252F4A] text-white py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-indigo-900/20 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-3"
+            >
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  <Fingerprint size={18} />
+                  Secure Sign In
+                </>
               )}
-
-              {/* Submit Button */}
-              <button
-                onClick={handleSubmit}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
-              >
-                Sign In
-                {submitting ? "Logging in..." : ""}
-              </button>
-            </div>
+            </button>
           </div>
         </div>
       </div>
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-    </>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
   );
 }
-

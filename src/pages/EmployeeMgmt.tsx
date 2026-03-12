@@ -1,432 +1,449 @@
-import React, { use, useEffect, useState, useMemo, useCallback } from 'react'; // Added useState
-import { Search, ChevronDown, Mail, Phone, Users, Calendar, Building2, Download, X, ChevronUp, Trash2 } from 'lucide-react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import {
+    Search, ChevronDown, ChevronUp, Users, Calendar, Building2,
+    X, Trash2, Clock, Edit3Icon, CheckCircle, UserPlus,
+    ShieldCheck, LogOut, Mail, Smartphone
+} from 'lucide-react';
 import { Employee, useEmployeeStore } from '../store/EmployeeStore';
-import { endpoints } from '../config/urls';
 import { Toast } from '../components/Toast';
+import AttendanceManagement from './Attendence';
 
 export default function EmployeeMgmt() {
-    console.log("Provider rendering");
+    const { employees, fetchEmployees, upsertEmployee } = useEmployeeStore();
+
+    // UI State
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: keyof Employee; direction: 'asc' | 'desc' } | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showNewEmployeeForm, setShowNewEmployeeForm] = useState(false);
+    const [showAttendanceForm, setShowAttendanceForm] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
-    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-        setToast({ message, type });
-    };
-    const { employees: employees, fetchEmployees, createEmployee } = useEmployeeStore();
-    const stats = [
-        { label: 'Total Employees', value: employees.length, icon: Users, color: 'blue' },
-        { label: 'Active', value: '5', icon: Mail, color: 'green' },
-        { label: 'On Leave', value: '0', icon: Calendar, color: 'yellow' },
-        { label: 'Departments', value: '5', icon: Building2, color: 'purple' }
-    ];
+    // Form Refs
+    const dobRef = useRef<HTMLInputElement>(null);
+    const joiningDateRef = useRef<HTMLInputElement>(null);
+
+    // Form Data State
+    const [formData, setFormData] = useState<Partial<Employee>>({
+        id: '', esic: '', eip: '', dob: '', firstName: '', lastName: '',
+        fatherName: '', gender: '', email: '', phone: '', adhaar: '',
+        role: '', joiningDate: '', uan: '',category: '', weeklyOff: [],
+    });
 
     useEffect(() => {
         const loadData = async () => {
             await fetchEmployees();
-
-            // After fetching, update visuals
             useEmployeeStore.getState().updateEmployeeVisuals();
         };
         loadData();
     }, [fetchEmployees]);
 
-    // 2️⃣ State for managing the overlay form
+    // --- Utility Functions ---
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ message, type });
 
+    const formatPhone = (phone: string) => {
+        let numeric = phone.replace(/\D/g, '');
+        if (numeric.startsWith("91")) numeric = numeric.substring(2);
+        numeric = numeric.substring(0, 10);
+        let formatted = "+91 ";
+        if (numeric.length > 0) formatted += numeric.substring(0, 5);
+        if (numeric.length > 5) formatted += " " + numeric.substring(5, 10);
+        return formatted;
+    };
 
-    const [showForm, setShowForm] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        adhaar: '',
-        role: '',
-    });
+    const formatToBritish = (dateStr: string) => {
+        if (!dateStr) return "";
+        const parts = dateStr.split(/[-/ ]/);
+        if (parts.length !== 3) return dateStr;
+        const [year, month, day] = parts[0].length === 4 ? parts : [parts[2], parts[1], parts[0]];
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${day}/${months[parseInt(month) - 1] || month}/${year}`;
+    };
 
-    //logic to accept only numbers and format as 1234-5678-9012 
+    // --- Event Handlers ---
+    const handleEditClick = (employee: Employee) => {
+        setSelectedEmployee(employee);
+        setFormData({ ...employee, phone: formatPhone(employee.phone || '') });
+        setShowNewEmployeeForm(true);
+    };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         if (name === 'adhaar') {
-            // Only allow numbers and format as 1234-5678-9012
-            const numericValue = value.replace(/\D/g, '');
-            const limitedValue = numericValue.substring(0, 12); // Limit to 12 digits
-            let formattedValue = '';
-            for (let i = 0; i < limitedValue.length; i++) {
-                if (i > 0 && i % 4 === 0) formattedValue += '-';
-                formattedValue += limitedValue[i];
-            }
-            setFormData(prev => ({ ...prev, [name]: formattedValue }));
-        }
-        //logic to prevent entering non-numeric characters in phone field and format as 123-456-7890 with +91 country code
-        else if (name === 'phone') {
-            // Keep only digits
-            let numericValue = value.replace(/\D/g, '');
-
-            // Remove leading 91 if user types it manually
-            if (numericValue.startsWith("91")) {
-                numericValue = numericValue.substring(2);
-            }
-
-            // Limit to 10 digits
-            numericValue = numericValue.substring(0, 10);
-
-            // Format as XXXXX YYYYY
-            let formattedValue = "+91 ";
-
-            if (numericValue.length > 0) {
-                formattedValue += numericValue.substring(0, 5);
-            }
-            if (numericValue.length > 5) {
-                formattedValue += " " + numericValue.substring(5, 10);
-            }
-
-            setFormData(prev => ({ ...prev, [name]: formattedValue }));
-        }
-        //only allow letters and spaces in role field
-        else if (name === 'role') {
-            const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, '');
-            setFormData(prev => ({ ...prev, [name]: alphabeticValue }));
-        }
-        else {
+            const numeric = value.replace(/\D/g, '').substring(0, 12);
+            let formatted = numeric.replace(/(\d{4})(?=\d)/g, '$1-');
+            setFormData(prev => ({ ...prev, [name]: formatted }));
+        } else if (name === 'phone') {
+            setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
+        } else if (name === 'role') {
+            setFormData(prev => ({ ...prev, [name]: value.replace(/[^a-zA-Z\s]/g, '') }));
+        } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
+    };
 
+    const toggleDayOff = (day: string) => {
+        const currentDays = formData.weeklyOff ?? [];
+        setFormData(prev => ({
+            ...prev,
+            weeklyOff: currentDays.includes(day)
+                ? currentDays.filter(d => d !== day)
+                : [...currentDays, day]
+        }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // valiatre inputs here if needed
-        if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.adhaar || !formData.role) {
-            showToast('Please fill in all required fields.', 'error');
+        if (!formData.firstName || !formData.lastName || !formData.email) {
+            showToast('Please fill in required fields.', 'error');
             return;
         }
         setSubmitting(true);
-
         try {
-            // The store's createEmployee handles the API call and visual defaults
-            await createEmployee(formData);
-            handleCancel(); // Reset and close
-            showToast('Employee created successfully!', 'success');
+            await upsertEmployee(formData as Employee);
+            showToast(selectedEmployee ? 'Staff updated successfully' : 'Staff registered successfully');
+            handleCancel();
         } catch (err) {
-            console.error('Failed to create employee', err);
-            showToast('Failed to create employee. Please try again.', 'error');
+            showToast('Failed to save employee data', 'error');
         } finally {
             setSubmitting(false);
         }
     };
 
     const handleCancel = () => {
-        setShowForm(false);
+        setShowNewEmployeeForm(false);
+        setSelectedEmployee(null);
         setFormData({
-            firstName: '',
-            lastName: '',
-            email: '',
-            phone: '',
-            adhaar: '',
-            role: '',
-
+            id: '', esic: '', eip: '', dob: '', firstName: '', lastName: '',
+            fatherName: '', gender: '', email: '', phone: '', adhaar: '',
+            role: '', joiningDate: '', uan: '', weeklyOff: [],
         });
-        setSubmitting(false);
     };
 
     const handleSort = (key: keyof Employee) => {
-        let direction: 'asc' | 'desc' = 'asc';
-        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
-
-        setSortConfig({ key, direction });
+        setSortConfig(prev => ({
+            key,
+            direction: prev?.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
     };
 
-    // 2. Date filtering . Sorting based on joiningDate
     const filteredAndSortedRows = useMemo(() => {
-        let filtered = [...employees];
-
-        // Sorting
+        let result = [...employees];
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(e =>
+                `${e.firstName} ${e.lastName}`.toLowerCase().includes(q) ||
+                e.role.toLowerCase().includes(q) || e.id.toString().includes(q)
+            );
+        }
         if (sortConfig) {
-            filtered.sort((a, b) => {
-                const aValue = a[sortConfig.key];
-                const bValue = b[sortConfig.key];
-
-                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-                return 0;
+            result.sort((a, b) => {
+                const aVal = a[sortConfig.key] ?? '';
+                const bVal = b[sortConfig.key] ?? '';
+                return sortConfig.direction === 'asc'
+                    ? (aVal < bVal ? -1 : 1)
+                    : (aVal > bVal ? -1 : 1);
             });
         }
+        return result;
+    }, [employees, sortConfig, searchQuery]);
 
-        return filtered;
-    }, [employees, sortConfig]);
+    const statsData = [
+        { label: 'Total Staff', value: employees.length, icon: Users, color: 'blue' },
+        { label: 'Active Now', value: '5', icon: CheckCircle, color: 'green' },
+        { label: 'On Leave', value: '0', icon: Calendar, color: 'yellow' },
+        { label: 'Departments', value: '5', icon: Building2, color: 'purple' }
+    ];
 
-
-
+    // UPDATED CLASSES
+    const inputClass = "w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-slate-900 font-black text-xs focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none placeholder:text-slate-400 placeholder:font-bold uppercase tracking-tight";
+    const labelClass = "block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1";
 
     return (
-        <>
-            <div className="p-8">
-                {/* Page Header */}
-                <div className="mb-8 flex items-start justify-between">
+        <div className="min-h-screen bg-[#F8FAFC] pb-12">
+            <div className="bg-[#1A233A] px-6 py-10 md:px-12 md:py-16 text-white rounded-b-[3rem] relative overflow-hidden shadow-2xl mb-8">
+                <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+                <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Employee Management</h1>
-                        <p className="text-gray-600">Manage and view employee information</p>
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight">Staff Management</h1>
+                        <p className="text-slate-400 font-medium mt-1">Directory, Identity & Attendance Control</p>
                     </div>
+                    <button
+                        onClick={() => setShowNewEmployeeForm(true)}
+                        className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-indigo-900/20 active:scale-95 w-full md:w-auto justify-center"
+                    >
+                        <UserPlus size={18} /> + Add Employee
+                    </button>
                 </div>
+            </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {stats.map((stat, index) => {
-                        const Icon = stat.icon as any;
-                        return (
-                            <div key={index} className="bg-white rounded-xl p-6 border border-gray-200">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                        <p className="text-sm text-gray-600 mb-2">{stat.label}</p>
-                                        <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                                    </div>
-                                    <div className={`p-2 rounded-lg ${stat.color === 'blue' ? 'bg-blue-100' :
-                                        stat.color === 'green' ? 'bg-green-100' :
-                                            stat.color === 'yellow' ? 'bg-yellow-100' : 'bg-purple-100'
-                                        }`}>
-                                        <Icon className={`w-6 h-6 ${stat.color === 'blue' ? 'text-blue-600' :
-                                            stat.color === 'green' ? 'text-green-600' :
-                                                stat.color === 'yellow' ? 'text-yellow-600' : 'text-purple-600'
-                                            }`} />
-                                    </div>
+            <div className="max-w-7xl mx-auto px-4 md:px-8">
+                {/* Stats & Search sections remained the same... */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
+                    {statsData.map((stat, i) => (
+                        <div key={i} className="bg-white rounded-3xl p-5 md:p-6 border border-slate-100 shadow-sm">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                                    <p className="text-2xl font-black text-slate-900">{stat.value}</p>
+                                </div>
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${stat.color === 'blue' ? 'bg-blue-50 text-blue-600' :
+                                    stat.color === 'green' ? 'bg-emerald-50 text-emerald-600' :
+                                        stat.color === 'yellow' ? 'bg-amber-50 text-amber-600' : 'bg-purple-50 text-purple-600'
+                                    }`}>
+                                    <stat.icon size={22} />
                                 </div>
                             </div>
-                        );
-                    })}
-                </div>
-
-                {/* Employee Directory */}
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-
-                    {/* Search and Filters */}
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search by name, email, or employee ID..."
-                                className="pl-9 pr-4 py-2 w-full border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
                         </div>
-                        {/* <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </button> */}
-                        <button
-                            onClick={() => setShowForm(true)}
+                    ))}
+                </div>
 
-                            className={`px-6 py-2.5 text-sm font-medium text-white rounded-lg shadow-lg shadow-blue-200 transition-all ${submitting ? "bg-blue-400" : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"}`}
-                        >
-                            + Add Employee
-                        </button>
-                    </div>
-
-                    {/* Employee Table */}
-                    <div className="overflow-x-auto max-h-80 overflow-y-auto">
-                        <table className="w-full">
-                            <thead className="sticky top-0 bg-white z-10 shadow-sm">
-                                <tr className="border-b border-slate-200">
-                                    <th onClick={() => handleSort('firstName')} className="cursor-pointer text-left py-3 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                                        <div className="flex items-center gap-1">Employee {sortConfig?.key === 'firstName' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}</div>
-                                    </th>
-
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Role</th>
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Adhaar</th>
-                                    <th onClick={() => handleSort('joiningDate')} className="cursor-pointer text-left py-3 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                                        <div className="flex items-center gap-1">Joining Date {sortConfig?.key === 'joiningDate' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}</div>
-                                    </th>
-                                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Action</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {filteredAndSortedRows.map((r) => (
-                                    <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                        <td className="py-4 px-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 ${r.color} rounded-full flex items-center justify-center`}>
-                                                    <span className="text-white font-bold text-sm">{r.avatar}</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-900">{r.firstName} {r.lastName}</p>
-                                                    {/* <p className="text-xs text-gray-500"></p> */}
-                                                    <p className="text-xs text-gray-600"># {r.id}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-4">
-                                            <span className="text-sm font-medium text-gray-900">{r.role}</span>
-                                        </td>
-                                        <td className="py-4 px-4">
-                                            <span className="text-sm font-medium text-gray-900">{r.adhaar}</span>
-                                        </td>
-                                        <td className="py-4 px-4 text-sm text-gray-600">{r.joiningDate}</td>
-                                        <td className="py-4 px-4">
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => { useEmployeeStore.getState().deleteEmployee(r.id); showToast('Employee deleted successfully!', 'success'); }}
-                                                    className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-red-100 hover:text-red-600 transition-colors"
-                                                    title="Delete Employee"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-
-                                {/* {!filteredAndSortedRows.length === 0 && (
-                                <tr><td colSpan={5} className="text-center py-10 text-slate-400">No employees found matching your criteria.</td></tr>
-                            )} */}
-                            </tbody>
-                        </table>
+                <div className="bg-white rounded-[2.5rem] p-6 mb-6 shadow-sm border border-slate-100">
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by name, ID or role..."
+                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                        />
                     </div>
                 </div>
 
-                {/* Overlay Form */}
-                {showForm && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                            {/* Form Header */}
-                            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
-                                <h2 className="text-2xl font-bold text-gray-900">Add New Employee</h2>
-                                <button
-                                    onClick={handleCancel}
-                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                                >
-                                    <X className="w-6 h-6" />
+                {/* Mobile & Desktop views remained the same... */}
+                {/* 4. Mobile Cards View */}
+                <div className="grid grid-cols-1 md:hidden gap-4">
+                    {filteredAndSortedRows.map((r) => (
+                        <div key={r.id} className="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100">
+                            <div className="flex items-center gap-4 mb-5 pb-5 border-b border-slate-50">
+                                <div className={`w-14 h-14 ${r.color} rounded-2xl flex items-center justify-center shadow-lg text-white font-black text-lg`}>
+                                    {r.avatar}
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-black text-slate-900">{r.firstName} {r.lastName}</h4>
+                                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{r.role}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 mt-1">ID: #{r.id}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 mb-5">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><ShieldCheck size={10} /> Aadhaar</p>
+                                    <p className="text-xs font-bold text-slate-700">{r.adhaar}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><Calendar size={10} /> Joined</p>
+                                    <p className="text-xs font-bold text-slate-700">{r.joiningDate}</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => handleEditClick(r)} className="flex-1 py-3 bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <Edit3Icon size={14} /> Edit
+                                </button>
+                                {r.timesheetPresent && (
+                                    <button onClick={() => { setSelectedEmployee(r); setShowAttendanceForm(true); }} className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                                        <Clock size={14} /> Attendance
+                                    </button>
+                                )}
+                                <button onClick={() => useEmployeeStore.getState().deleteEmployee(r.id)} className="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                                    <Trash2 size={16} />
                                 </button>
                             </div>
+                        </div>
+                    ))}
+                </div>
 
-                            {/* Form Body */}
-                            <form onSubmit={handleSubmit} className="p-6">
-                                <div className="space-y-6">
-                                    {/* Name */}
+                <div className="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                    <table className="w-full">
+                        <thead className="bg-slate-50/50 border-b border-slate-100">
+                            <tr>
+                                <th onClick={() => handleSort('firstName')} className="px-8 py-5 cursor-pointer text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">
+                                    Staff Member {sortConfig?.key === 'firstName' && (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                                </th>
+                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Role</th>
+                                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Identity (Aadhaar)</th>
+                                <th onClick={() => handleSort('joiningDate')} className="px-6 py-5 cursor-pointer text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">
+                                    Joining {sortConfig?.key === 'joiningDate' && (sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+                                </th>
+                                <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {filteredAndSortedRows.map((r) => (
+                                <tr key={r.id} className="group hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-8 py-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-10 h-10 ${r.color} rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md group-hover:scale-110 transition-transform`}>
+                                                {r.avatar}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-slate-900 leading-none">{r.firstName} {r.lastName}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">ID: {r.id}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5 text-sm font-bold text-slate-600">{r.role}</td>
+                                    <td className="px-6 py-5 text-xs font-mono text-slate-500 font-bold">{r.adhaar}</td>
+                                    <td className="px-6 py-5 text-xs font-bold text-slate-500">{r.joiningDate}</td>
+                                    <td className="px-8 py-5">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button onClick={() => handleEditClick(r)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all"><Edit3Icon size={16} /></button>
+                                            {r.timesheetPresent && <button onClick={() => { setSelectedEmployee(r); setShowAttendanceForm(true); }} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Clock size={16} /></button>}
+                                            <button onClick={() => useEmployeeStore.getState().deleteEmployee(r.id)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-all"><Trash2 size={16} /></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* --- MODALS --- */}
+            {showNewEmployeeForm && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between p-8 border-b border-slate-100">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase italic">
+                                {selectedEmployee ? `Edit Profile: ${selectedEmployee.firstName}` : 'New Staff Registration'}
+                            </h2>
+                            <button onClick={handleCancel} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
+                            {/* Section: Personal Details */}
+                            <div>
+                                <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-4">Personal Details</h3>
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            First Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="firstName"
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                                            placeholder="e.g., John"
-                                        />
+                                        <label className={labelClass}>First Name</label>
+                                        <input type="text" name="firstName" onChange={handleInputChange} value={formData.firstName} required placeholder="e.g. Rahul" className={inputClass} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Last Name <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="lastName"
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                                            placeholder="e.g., Doe"
-                                        />
+                                        <label className={labelClass}>Last Name</label>
+                                        <input type="text" name="lastName" onChange={handleInputChange} value={formData.lastName} required placeholder="e.g. Kumar" className={inputClass} />
                                     </div>
-
-
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Role <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="role"
-                                            value={formData.role}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                                            placeholder="e.g., Software Engineer"
-                                        />
+                                        <label className={labelClass}>Father's Name</label>
+                                        <input type="text" name="fatherName" onChange={handleInputChange} value={formData.fatherName} required placeholder="e.g. Ramesh Singh" className={inputClass} />
                                     </div>
-                                    {/* Adhaar */}
-
-
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Adhaar <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="adhaar"
-                                            value={formData.adhaar}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                                            placeholder="e.g., 1234-5678-9012"
-                                        />
+                                        <label className={labelClass}>Gender</label>
+                                        <select name="gender" onChange={handleInputChange} value={formData.gender} required className={inputClass}>
+                                            <option value="">Select Gender</option>
+                                            <option value="MALE">MALE</option>
+                                            <option value="FEMALE">FEMALE</option>
+                                        </select>
                                     </div>
-
-                                    {/* Role */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Email <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="email" // Note the dot notation
-                                            value={formData.email}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                                            placeholder="e.g., john.doe@example.com"
-                                        />
+                                        <label className={labelClass}>Date of Birth</label>
+                                        <div className="relative">
+                                            <input type="text" readOnly value={formatToBritish(formData.dob || '')} onClick={() => dobRef.current?.showPicker()} placeholder="DD/MMM/YYYY" className={`${inputClass} cursor-pointer`} />
+                                            <input type="date" ref={dobRef} name="dob" value={formData.dob || ""} onChange={handleInputChange} className="absolute inset-0 opacity-0 pointer-events-none" />
+                                        </div>
                                     </div>
-
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Phone <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text" name="phone"
-                                            value={formData.phone}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                                            placeholder="e.g., 123-456-7890"
-                                        />
+                                        <label className={labelClass}>Corporate Email</label>
+                                        <input type="email" name="email" onChange={handleInputChange} value={formData.email} required placeholder="name@company.com" className={inputClass} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section: Statutory & Finance */}
+                            <div>
+                                <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-4">Statutory & Finance</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className={labelClass}>Aadhaar Number</label>
+                                        <input type="text" name="adhaar" value={formData.adhaar} onChange={handleInputChange} required placeholder="XXXX-XXXX-XXXX" className={inputClass} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Phone Number</label>
+                                        <input type="text" name="phone" value={formData.phone} onChange={handleInputChange} required placeholder="+91 00000 00000" className={inputClass} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>UAN Number</label>
+                                        <input type="text" name="uan" value={formData.uan} onChange={handleInputChange} placeholder="12 Digit UAN" className={inputClass} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>EIP Number</label>
+                                        <input type="text" name="eip" value={formData.eip} onChange={handleInputChange} placeholder="EIP-XXXXX" className={inputClass} />
+                                    </div>
+                                    <div >
+                                        <label className={labelClass}>ESIC / PF Number</label>
+                                        <input type="text" name="esic" value={formData.esic} onChange={handleInputChange} placeholder="Statutory Registration ID" className={inputClass} />
+                                    </div>
+                                    <div >
+                                        <label className={labelClass}>Category</label>
+                                        <input type="text" name="esic" value={formData.category} onChange={handleInputChange} placeholder="Category" className={inputClass} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section: Work Details */}
+                            <div>
+                                <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-4">Work Schedule</h3>
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className={labelClass}>Joining Date</label>
+                                        <div className="relative">
+                                            <input type="text" readOnly value={formatToBritish(formData.joiningDate || '')} onClick={() => joiningDateRef.current?.showPicker()} placeholder="DD/MMM/YYYY" className={`${inputClass} cursor-pointer`} />
+                                            <input type="date" ref={joiningDateRef} name="joiningDate" value={formData.joiningDate || ""} onChange={handleInputChange} className="absolute inset-0 opacity-0 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Job Role</label>
+                                        <input type="text" name="role" value={formData.role} onChange={handleInputChange} required placeholder="e.g. Site Supervisor" className={inputClass} />
                                     </div>
                                 </div>
 
-                                {/* Form Footer */}
-                                <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-                                    <button
-                                        disabled={submitting}
-                                        onClick={handleCancel}
-                                        className="px-6 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSubmit}
-                                        disabled={submitting}
-                                        className={`px-6 py-2.5 text-sm font-medium text-white rounded-lg shadow-lg shadow-blue-200 transition-all ${submitting ? "bg-blue-400" : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"}`}
-                                    >
-                                        {submitting ? "Creating..." : "Create Employee"}
-                                    </button>
+                                <label className={labelClass}>Weekly Off Days</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            onClick={() => toggleDayOff(day)}
+                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border-2 ${formData.weeklyOff?.includes(day)
+                                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md"
+                                                    : "bg-white border-slate-100 text-slate-400 hover:border-indigo-100"
+                                                }`}
+                                        >
+                                            {day}
+                                        </button>
+                                    ))}
                                 </div>
-                            </form>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100 sticky bottom-0 bg-white">
+                                <button type="button" onClick={handleCancel} className="px-6 py-3 text-xs font-black uppercase text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
+                                <button type="submit" disabled={submitting} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-900/20 transition-all active:scale-95">
+                                    {submitting ? 'Processing...' : (selectedEmployee ? 'Update Staff' : 'Confirm Registration')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Modal for attendance remained the same... */}
+            {showAttendanceForm && selectedEmployee && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between p-8 border-b border-slate-100">
+                            <h2 className="text-2xl font-black text-slate-900">Attendance: {selectedEmployee.firstName} {selectedEmployee.lastName}</h2>
+                            <button onClick={() => { setShowAttendanceForm(false); setSelectedEmployee(null); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={24} /></button>
+                        </div>
+                        <div className="overflow-y-auto p-2">
+                            <AttendanceManagement employee={selectedEmployee} isPopup={true} />
                         </div>
                     </div>
-                )}
-            </div>
-            {toast && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast(null)}
-                />
+                </div>
             )}
-        </>
+
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        </div>
     );
 }
-

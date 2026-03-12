@@ -25,7 +25,7 @@ export interface User {
 interface UserState {
   user: User | null;
   loading: boolean;
-  login: (credentials: Partial<User>) => Promise<void>;
+  login: (credentials: any) => Promise<any>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   updateUserVisuals: () => void;
 }
@@ -74,23 +74,32 @@ export const useUserStore = create<UserState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(credentials)
           });
+
           const data = await res.json();
 
-          if (!res.ok) throw new Error(data.message);
+          if (!res.ok) {
+            // Throwing allows the component's catch block to handle the error message
+            console.error('Login failed at store', data);
+            throw new Error(data.message || 'Login failed');
+          }
 
-          // 1. Store the sensitive auth bits in localStorage via your helper
+          // Store auth bits (Tokens, etc)
           saveAuthFromResponse(data.auth, data.user.firstName);
 
-          // 2. Store the UI-related user data in Zustand 
-          // (Zustand Persist will handle saving this to 'user-storage')
+          // Update Zustand state
           set({
             user: data.user,
             loading: false
           });
 
           get().updateUserVisuals();
-        } catch (err) {
+
+          // 2. RETURN the data so the LoginRegister page can access it
+          return data;
+
+        } catch (err: any) {
           set({ loading: false, user: null });
+          // Re-throw so the UI knows an error occurred
           throw err;
         }
       },

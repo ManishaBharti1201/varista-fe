@@ -16,6 +16,7 @@ export interface Company {
     addressLine2?: string;
     cityStateZip: string;
   };
+  ledgerBalance: number;
 }
 
 interface CompanyState {
@@ -23,6 +24,7 @@ interface CompanyState {
   loading: boolean;
   fetchCompanies: () => Promise<void>;
   createCompany: (company: Partial<Company>) => Promise<void>;
+  updateCompany: (company: Partial<Company>) => Promise<void>;
   updateCompanyVisuals: () => void;
 }
 
@@ -41,9 +43,9 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
   fetchCompanies: async () => {
     set({ loading: true });
     try {
-     const res = await apiRequest(endpoints.companiesList(), {
-       method: 'GET',
-     });
+      const res = await apiRequest(endpoints.companiesList(), {
+        method: 'GET',
+      });
       const data = await res.json();
       set({ companies: data, loading: false });
     } catch (err) {
@@ -62,6 +64,7 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       createdAt: new Date().toISOString().split('T')[0],
     };
 
+
     set({ loading: true });
     try {
       const res = await apiRequest(endpoints.companyCreate(), {
@@ -74,11 +77,43 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       data.avatar = payload.avatar;
       data.createdAt = payload.createdAt;
       set(state => ({ companies: [...state.companies, data], loading: false }));
-      
+
     } catch (err) {
       console.error('Failed to create company', err);
       set({ loading: false });
       throw err;
+    }
+  },
+
+  updateCompany: async (companyData: Partial<Company>) => {
+    if (!companyData.id) {
+      console.error("Cannot update company: Missing ID");
+      return;
+    }
+
+    set({ loading: true });
+    try {
+      const res = await apiRequest(
+        endpoints.companyUpdate(undefined, companyData.id.toString()),
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(companyData)
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to update company on server');
+
+      const data = await res.json();
+
+      set(state => ({
+        companies: state.companies.map(c => c.id === data.id ? data : c),
+        loading: false
+      }));
+    } catch (err) {
+      console.error('Failed to update company', err);
+      set({ loading: false });
+      throw err; // Re-throw so the UI 'catch' block can see it
     }
   },
 

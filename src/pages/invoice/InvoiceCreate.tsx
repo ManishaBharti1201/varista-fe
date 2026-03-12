@@ -1,22 +1,17 @@
-import React, { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Plus, Trash2, ChevronDown, ReceiptText, Calculator } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { endpoints, bffBase } from '../../config/urls';
-import { ChevronDown } from "lucide-react";
+import { endpoints } from '../../config/urls';
 import { useCompanyStore } from "../../store/CompanyStore";
 import { Toast } from "../../components/Toast";
 import { apiRequest } from "../../utils/apiClient";
 
 export default function InvoiceCreate() {
-  console.log("Provider rendering");
   const navigate = useNavigate();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-  };
-
-  const { companies, fetchCompanies, loading } = useCompanyStore();
+  const { companies, fetchCompanies } = useCompanyStore();
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 
   const [invoice, setInvoice] = useState<any>({
@@ -24,16 +19,7 @@ export default function InvoiceCreate() {
     taxRate: '',
     totalAmt: 0.0,
     buyerId: 0,
-    items: [
-      {
-        description: "",
-        hsnSac: "",
-        quantity: "",
-        rate: "",
-        unit: "Pcs",
-        amount: "",
-      }
-    ],
+    items: [{ description: "", hsnSac: "", quantity: "", rate: "", unit: "Pcs", amount: 0 }],
   });
 
   const [errors, setErrors] = useState<any>({});
@@ -41,10 +27,12 @@ export default function InvoiceCreate() {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState("Select Company");
 
-  // For top-level fields (like buyerId)
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
   const updateField = (field: string, value: any) => {
     setInvoice((p: any) => ({ ...p, [field]: value }));
-    // Clear the error for this field if it exists
     if (errors[field] || (field === "buyerId" && errors.buyer)) {
       setErrors((prev: any) => {
         const { buyer, ...rest } = prev;
@@ -53,7 +41,6 @@ export default function InvoiceCreate() {
     }
   };
 
-  // Helper to sum item amounts
   const calculateTotals = (items: any[], taxRate: number) => {
     const subtotal = items.reduce((sum, it) => sum + (parseFloat(it.amount) || 0), 0);
     const taxAmount = (subtotal * taxRate) / 100;
@@ -68,33 +55,20 @@ export default function InvoiceCreate() {
       const newItems = [...prev.items];
       newItems[index] = { ...newItems[index], [field]: value };
 
-      // Update item amount
       const qty = parseFloat(newItems[index].quantity) || 0;
       const rate = parseFloat(newItems[index].rate) || 0;
       newItems[index].amount = Math.round((qty * rate + Number.EPSILON) * 100) / 100;
 
       const { taxAmount, totalAmount } = calculateTotals(newItems, prev.taxRate);
-      return { ...prev, items: newItems, taxAmount, totalAmt: totalAmount };
+      return { ...prev, items: newItems, taxAmt: taxAmount, totalAmt: totalAmount };
     });
-
-    // Clear item-specific errors if they exist
-    if (errors.itemDetails?.[index]?.[field]) {
-      setErrors((prev: any) => {
-        const itemDetails = prev.itemDetails ? [...prev.itemDetails] : [];
-        if (itemDetails[index]) {
-          const { [field]: _, ...rest } = itemDetails[index];
-          itemDetails[index] = rest;
-        }
-        return { ...prev, itemDetails };
-      });
-    }
   };
 
   const updateTaxRate = (rate: string) => {
     const newRate = parseFloat(rate) || 0;
     setInvoice((prev: any) => {
       const { taxAmount, totalAmount } = calculateTotals(prev.items, newRate);
-      return { ...prev, taxRate: newRate, taxAmt: taxAmount, totalAmt: totalAmount };
+      return { ...prev, taxRate: rate, taxAmt: taxAmount, totalAmt: totalAmount };
     });
   };
 
@@ -103,49 +77,47 @@ export default function InvoiceCreate() {
     items: [...p.items, { description: "", hsnSac: "", quantity: 1, rate: 0, unit: "Pcs", amount: 0 }]
   }));
 
-  const removeItem = (idx: number) =>
-    setInvoice((p: any) => ({
-      ...p,
-      items: p.items.filter((_: any, i: number) => i !== idx),
-    }));
+  const removeItem = (idx: number) => {
+    const newItems = invoice.items.filter((_: any, i: number) => i !== idx);
+    const { taxAmount, totalAmount } = calculateTotals(newItems, parseFloat(invoice.taxRate) || 0);
+    setInvoice((p: any) => ({ ...p, items: newItems, taxAmt: taxAmount, totalAmt: totalAmount }));
+  };
 
+  const validateForm = () => {
+    const newErrors: any = {};
+    if (!invoice.buyerId || invoice.buyerId === 0) newErrors.buyer = "Client is required";
+    if (invoice.items.length === 0) newErrors.items = "Add at least one item";
+    const itemErrors = invoice.items.map((item: any) => {
+      const e: any = {};
+      if (!item.description.trim()) e.description = "Required";
+      if (parseFloat(item.quantity) <= 0) e.quantity = "Invalid";
+      return Object.keys(e).length > 0 ? e : null;
+    });
+    if (itemErrors.some((e: any) => e !== null)) newErrors.itemDetails = itemErrors;
+    return newErrors;
+  };
 
   const submit = async () => {
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      showToast("Please fix the errors in the form", "error"); // Feedback on failed submit
+      showToast("Please fill all required fields", "error");
       return;
     }
     setSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
-      const headers: any = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      console.log("Submitting invoice", endpoints.invoiceCreate(), headers, invoice);
-
       const res = await apiRequest(endpoints.invoiceCreate(), {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(invoice),
       });
 
-      const ct = res.headers.get("content-type") || "";
-      let body: any = null;
-      if (ct.includes("application/json")) body = await res.json();
-      else body = await res.text();
-
       if (res.ok) {
-        reset();
         showToast("Invoice created successfully!");
-        // Delay navigation slightly so they see the success message
         setTimeout(() => navigate("/invoices/manage"), 1500);
       } else {
         showToast("Failed to create invoice", "error");
       }
-
-      // success -> navigate to list
-      reset();
     } catch (err: any) {
       setErrors((p: any) => ({ ...p, server: String(err?.message || err) }));
     } finally {
@@ -153,203 +125,175 @@ export default function InvoiceCreate() {
     }
   };
 
-  const validateForm = () => {
-    const newErrors: any = {};
-
-    // Buyer Validation
-    if (!invoice.buyerId || invoice.buyerId === 0) {
-      newErrors.buyer = "Please select a client.";
-    }
-
-    // Items Validation
-    if (invoice.items.length === 0) {
-      newErrors.items = "At least one item is required.";
-    } else {
-      const itemErrors = invoice.items.map((item: any) => {
-        const errors: any = {};
-        if (!item.description.trim()) errors.description = "Required";
-        if (!item.hsnSac.trim()) errors.hsnSac = "Required";
-        if (parseFloat(item.quantity) <= 0) errors.quantity = "Qty > 0";
-        if (parseFloat(item.rate) <= 0) errors.rate = "Rate > 0";
-        if (!item.unit.trim()) errors.unit = "Required";
-        return Object.keys(errors).length > 0 ? errors : null;
-      });
-
-      // Only add to newErrors if at least one item has an error
-      if (itemErrors.some((e: any) => e !== null)) {
-        newErrors.itemDetails = itemErrors;
-      }
-    }
-
-    return newErrors;
-  };
-
-  const reset = () => {
-    setErrors({});
-    setInvoice({
-      taxAmt: 0.0,
-      taxRate: '',
-      totalAmt: 0.0,
-      buyerId: 0,
-      items: [
-        {
-          description: "",
-          hsnSac: "",
-          quantity: "",
-          rate: "",
-          unit: "mandays",
-          amount: "",
-        }
-      ],
-    });
-    setSelected("Select Company");
-  };
-
   return (
-    <>
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-transparent">
+    <div className="max-w-5xl mx-auto pb-20 md:pb-10">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* Header */}
+        <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              📋
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-md shadow-blue-100">
+              <ReceiptText size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-lg">Create Invoice</h3>
-              <p className="text-sm text-slate-600">
-                Generate new invoices for clients
-              </p>
+              <h3 className="font-bold text-slate-800 text-lg leading-tight">Create Invoice</h3>
+              <p className="text-xs md:text-sm text-slate-500">Draft a new billing statement</p>
             </div>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          <div className="relative inline-block text-left w-80">
-            <button
-              onClick={() => setIsOpen((prev) => !prev)}
-              className={`w-full flex items-center gap-2 px-4 py-2 bg-white border rounded-lg text-sm font-medium transition-colors 
-      ${errors.buyer ? "border-red-500 text-red-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-            >
-              {selected}
-              <ChevronDown className={`w-5 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-            </button>
-            {isOpen && (
-              <div className="absolute left-0 z-10 mt-2 w-full origin-top-left rounded-md bg-white 
-                    shadow-lg ring-1 ring-black ring-opacity-5">
-                <div className="py-1">
+        <div className="p-4 md:p-6 space-y-8">
+          {/* Client Selection */}
+          <div className="max-w-md">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Billing To</label>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full flex items-center justify-between px-4 py-2.5 bg-white border rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-100 
+                ${errors.buyer ? "border-red-500 ring-1 ring-red-50" : "border-slate-300 text-slate-700 hover:border-slate-400"}`}
+              >
+                <span className="truncate">{selected}</span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isOpen && (
+                <div className="absolute left-0 z-20 mt-1 w-full rounded-lg bg-white shadow-xl border border-slate-200 py-1 max-h-60 overflow-auto">
                   {companies.map((client) => (
                     <button
                       key={client.id}
-                      onClick={() => {
-                        setSelected(client.name);
-                        updateField("buyerId", client.id);
-                        setIsOpen(false);
-                      }}
-                      className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => { setSelected(client.name); updateField("buyerId", client.id); setIsOpen(false); }}
+                      className="block w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-blue-50 transition-colors"
                     >
                       {client.name}
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-            {errors.buyer && <p className="text-xs text-red-500 mt-1">{errors.buyer}</p>}
-            {/* ... dropdown menu code ... */}
+              )}
+            </div>
+            {errors.buyer && <p className="text-xs text-red-500 mt-1.5 ml-1">{errors.buyer}</p>}
           </div>
 
-          <div >
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold text-slate-700">Items</h4>
+          {/* Items Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Line Items</h4>
               <button
                 onClick={addItem}
-                className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-lg text-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-semibold transition-colors"
               >
-                <Plus className="w-4 h-4" /> Add Item
+                <Plus size={16} /> Add
               </button>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobile View: Cards */}
+            <div className="space-y-4 md:hidden">
+              {invoice.items.map((it: any, idx: number) => (
+                <div key={idx} className="p-4 bg-slate-50 rounded-xl border border-slate-200 relative">
+                  <button 
+                    onClick={() => removeItem(idx)}
+                    className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-red-500"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Description</label>
+                      <input
+                        value={it.description}
+                        onChange={(e) => updateItemField(idx, "description", e.target.value)}
+                        className="w-full bg-transparent border-b border-slate-300 py-1 text-sm focus:border-blue-500 outline-none"
+                        placeholder="Service/Product name"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Qty</label>
+                        <input
+                          type="number"
+                          value={it.quantity}
+                          onChange={(e) => updateItemField(idx, "quantity", e.target.value)}
+                          className="w-full bg-transparent border-b border-slate-300 py-1 text-sm focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Rate</label>
+                        <input
+                          type="number"
+                          value={it.rate}
+                          onChange={(e) => updateItemField(idx, "rate", e.target.value)}
+                          className="w-full bg-transparent border-b border-slate-300 py-1 text-sm focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-end pt-2">
+                      <span className="text-xs font-medium text-slate-500">Total:</span>
+                      <span className="font-bold text-slate-900">₹{(it.amount || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden md:block overflow-x-auto border border-slate-100 rounded-lg">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
-                    <th className="py-2 px-2">Description</th>
-                    <th className="py-2 px-2">HSN/SAC</th>
-                    <th className="py-2 px-2">Qty</th>
-                    <th className="py-2 px-2">Rate</th>
-                    <th className="py-2 px-2">Unit</th>
-                    <th className="py-2 px-2">Amount</th>
-                    <th className="py-2 px-2">&nbsp;</th>
+                <thead className="bg-slate-50 text-slate-500 font-medium">
+                  <tr>
+                    <th className="py-3 px-4 text-left">Description</th>
+                    <th className="py-3 px-4 text-left w-32">HSN/SAC</th>
+                    <th className="py-3 px-4 text-left w-20">Qty</th>
+                    <th className="py-3 px-4 text-left w-28">Rate</th>
+                    <th className="py-3 px-4 text-left w-28">Unit</th>
+                    <th className="py-3 px-4 text-right w-28">Amount</th>
+                    <th className="py-3 px-4 w-10"></th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {invoice.items.map((it: any, idx: number) => (
-                    <tr key={idx} className="border-b border-slate-100">
-                      <td className="py-2 px-2">
+                    <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="p-3">
                         <input
                           value={it.description}
                           onChange={(e) => updateItemField(idx, "description", e.target.value)}
-                          placeholder="Item description"
-                          className={`w-full px-2 py-1 rounded border transition-all ${errors.itemDetails?.[idx]?.description
-                            ? "border-red-500 bg-red-50 focus:ring-1 focus:ring-red-500"
-                            : "border-slate-200"
-                            }`}
+                          className="w-full px-2 py-1.5 rounded border-slate-200 border focus:ring-1 focus:ring-blue-400 outline-none"
                         />
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="p-3">
                         <input
                           value={it.hsnSac}
-                          onChange={(e) =>
-                            updateItemField(idx, "hsnSac", e.target.value)
-                          }
-                          placeholder="1111111"
-                          className={`w-full px-2 py-1 rounded border transition-all ${errors.itemDetails?.[idx]?.hsnSac
-                            ? "border-red-500 bg-red-50 focus:ring-1 focus:ring-red-500"
-                            : "border-slate-200"
-                            }`}
+                          onChange={(e) => updateItemField(idx, "hsnSac", e.target.value)}
+                          className="w-full px-2 py-1.5 rounded border-slate-200 border outline-none"
                         />
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="p-3">
                         <input
+                          type="number"
                           value={it.quantity}
-                          onChange={(e) =>
-                            updateItemField(idx, "quantity", e.target.value)
-                          }
-                          className={`w-20 px-2 py-1 rounded border transition-all ${errors.itemDetails?.[idx]?.quantity
-                            ? "border-red-500 bg-red-50 focus:ring-1 focus:ring-red-500"
-                            : "border-slate-200"
-                            }`}
+                          onChange={(e) => updateItemField(idx, "quantity", e.target.value)}
+                          className="w-full px-2 py-1.5 rounded border-slate-200 border outline-none"
                         />
                       </td>
-                      <td className="py-2 px-2">
+                      <td className="p-3">
                         <input
+                          type="number"
                           value={it.rate}
-                          onChange={(e) =>
-                            updateItemField(idx, "rate", e.target.value)
-                          }
-                          className={`w-28 px-2 py-1 rounded border transition-all ${errors.itemDetails?.[idx]?.rate
-                            ? "border-red-500 bg-red-50 focus:ring-1 focus:ring-red-500"
-                            : "border-slate-200"
-                            }`}
+                          onChange={(e) => updateItemField(idx, "rate", e.target.value)}
+                          className="w-full px-2 py-1.5 rounded border-slate-200 border outline-none"
                         />
                       </td>
-                      <td className="py-2 px-2">
-                        <select value={it.unit} onChange={(e) => updateItemField(idx, "unit", e.target.value)}
-                          className={`w-24 px-2 py-1 rounded border transition-all ${errors.itemDetails?.[idx]?.unit
-                            ? "border-red-500 bg-red-50 focus:ring-1 focus:ring-red-500"
-                            : "border-slate-200"
-                            }`}>
-                          <option value="mandays">mandays</option>
-                          <option value="kg">kg</option>
-                          <option value="pcs">pcs</option>
-                          <option value="pack">pack</option>
-                        </select>
-                        {errors.itemDetails?.[idx]?.unit && <p className="text-xs text-red-500 mt-1">{errors.itemDetails?.[idx]?.unit}</p>}
-                      </td>
-                      <td className="py-2 px-2">{(it.amount || 0).toFixed(2)}</td>
-                      <td className="py-2 px-2">
-                        <button
-                          onClick={() => removeItem(idx)}
-                          className="p-1 rounded hover:bg-red-50"
+                      <td className="p-3">
+                        <select 
+                          value={it.unit} 
+                          onChange={(e) => updateItemField(idx, "unit", e.target.value)}
+                          className="w-full px-2 py-1.5 rounded border-slate-200 border outline-none bg-white"
                         >
-                          <Trash2 className="w-4 h-4 text-red-600" />
+                          <option value="mandays">Mandays</option>
+                          <option value="Pcs">Pcs</option>
+                          <option value="kg">kg</option>
+                        </select>
+                      </td>
+                      <td className="p-3 text-right font-medium">₹{it.amount}</td>
+                      <td className="p-3">
+                        <button onClick={() => removeItem(idx)} className="text-slate-300 hover:text-red-500 transition-colors">
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
@@ -359,56 +303,55 @@ export default function InvoiceCreate() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-xs text-slate-600">
-                Tax Rate
-              </label>
-              <input
-                value={invoice.taxRate}
-                onChange={(e) => updateTaxRate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 max-w-xs"
-              />
+          {/* Totals Section */}
+          <div className="flex flex-col md:flex-row justify-between items-start gap-6 pt-6 border-t border-slate-100">
+            <div className="w-full md:w-64">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Tax Rate (%)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={invoice.taxRate}
+                  onChange={(e) => updateTaxRate(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  placeholder="0.00"
+                />
+                <Calculator className="absolute right-3 top-2.5 w-4 h-4 text-slate-400" />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs text-slate-600">Total Tax Amount</label>
-              <h3 className="font-bold text-slate-800 text-lg">{invoice.taxAmt}</h3>
-            </div>
-            <div>
-              <label className="block text-xs text-slate-600">Final  Amount</label>
-              <h3 className="font-bold text-slate-800 text-lg">{invoice.totalAmt}</h3>
+
+            <div className="w-full md:w-80 bg-slate-50 rounded-xl p-4 space-y-3">
+              <div className="flex justify-between text-sm text-slate-600">
+                <span>Tax Amount</span>
+                <span className="font-semibold text-slate-800">₹{invoice.taxAmt.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t border-slate-200">
+                <span>Grand Total</span>
+                <span className="text-blue-600">₹{invoice.totalAmt.toLocaleString()}</span>
+              </div>
             </div>
           </div>
 
-
-          {errors.server && (
-            <div className="text-sm text-red-600">{errors.server}</div>
-          )}
-          <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
+          {/* Actions */}
+          <div className="flex flex-col-reverse md:flex-row items-center justify-end gap-3 pt-4">
             <button
-              onClick={reset}
-              disabled={submitting}
-              className="px-6 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
+              onClick={() => { if(window.confirm("Reset all fields?")) setInvoice({ ...invoice, items: [{ description: "", hsnSac: "", quantity: "", rate: "", unit: "Pcs", amount: 0 }] }); }}
+              className="w-full md:w-auto px-6 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-lg transition-all"
             >
-              Reset
+              Discard Draft
             </button>
             <button
               onClick={submit}
               disabled={submitting}
-              className={`px-6 py-2.5 text-sm font-medium text-white rounded-lg shadow-lg shadow-blue-200 transition-all ${submitting ? "bg-blue-400" : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"}`}
+              className={`w-full md:w-auto px-8 py-3 text-sm font-bold text-white rounded-lg shadow-lg transition-all 
+              ${submitting ? "bg-slate-400" : "bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-blue-200"}`}
             >
-              {submitting ? "Creating..." : "Create Invoice"}
+              {submitting ? "Processing..." : "Issue Invoice"}
             </button>
           </div>
         </div>
-      </div >
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-    </>
+      </div>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
   );
 }

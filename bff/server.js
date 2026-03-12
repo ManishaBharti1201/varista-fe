@@ -37,6 +37,9 @@ const EXTERNAL_COMPANY_LIST_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_COMPANY_LI
 const EXTERNAL_COMPANY_CREATE_PATH = '/company/create';
 const EXTERNAL_COMPANY_CREATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_COMPANY_CREATE_PATH}`;
 
+const EXTERNAL_COMPANY_UPDATE_PATH = '/company/updatePayment';
+const EXTERNAL_COMPANY_UPDATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_COMPANY_UPDATE_PATH}`;  
+
 // External invoices endpoint (can be overridden)
 const EXTERNAL_INVOICE_CREATE_PATH = '/invoice/create';
 const EXTERNAL_INVOICE_CREATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_CREATE_PATH}`;
@@ -53,7 +56,10 @@ const EXTERNAL_INVOICE_DOWNLOAD_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOIC
 const EXTERNAL_INVOICE_MARKASPAID_PATH = '/invoice/{id}/mark-as-paid';
 const EXTERNAL_INVOICE_MARKASPAID_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_MARKASPAID_PATH}`;
 
-const EXTERNAL_EMPLOYEE_CREATE_PATH = '/employee/create';
+const EXTERNAL_INVOICE_REPLACE_PATH = '/invoice/{id}/replace';
+const EXTERNAL_INVOICE_REPLACE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_INVOICE_REPLACE_PATH}`;
+
+const EXTERNAL_EMPLOYEE_CREATE_PATH = '/employee/upsert';
 const EXTERNAL_EMPLOYEE_CREATE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_EMPLOYEE_CREATE_PATH}`;
 
 const EXTERNAL_EMPLOYEE_LIST_PATH = '/employee/all';
@@ -74,6 +80,15 @@ const EXTERNAL_QUOTATION_DELETE_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_QUOTAT
 const EXTERNAL_QUOTATION_DOWNLOAD_PATH = '/quotation/{id}/download';
 const EXTERNAL_QUOTATION_DOWNLOAD_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_QUOTATION_DOWNLOAD_PATH}`;
 
+const EXTERNAL_TIMESHEET_UPLOAD_PATH = '/timesheet/upload';
+const EXTERNAL_TIMESHEET_UPLOAD_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_TIMESHEET_UPLOAD_PATH}`;
+
+const EXTERNAL_TIMESHEET_GET_PATH = '/timesheet?employeeId={id}';
+const EXTERNAL_TIMESHEET_GET_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_TIMESHEET_GET_PATH}`;
+
+const EXTERNAL_NOTIFICATION_GET_PATH = '/notification/all';
+const EXTERNAL_NOTIFICATION_GET_URL = `${EXTERNAL_SERVICE_BASE}${EXTERNAL_NOTIFICATION_GET_PATH}`;
+
 
 // Restrict CORS to the frontend origin if provided; otherwise allow all
 if (FRONTEND_ORIGIN) {
@@ -90,12 +105,9 @@ app.get('/api/health', (req, res) => {
 
 // Log configuration at startup
 console.log('BFF configuration:');
-console.log(' FRONTEND_ORIGIN:', FRONTEND_ORIGIN || 'not set, allowing all origins');
-console.log(' EXTERNAL_AUTH_URL:', EXTERNAL_AUTH_URL);
-console.log(' EXTERNAL_COMPANY_LIST_URL:', EXTERNAL_COMPANY_LIST_URL);
-console.log(' EXTERNAL_INVOICE_CREATE_URL:', EXTERNAL_INVOICE_CREATE_URL);
-console.log(' EXTERNAL_INVOICE_LIST_URL:', EXTERNAL_INVOICE_LIST_URL);
-console.log(' EXTERNAL_INVOICE_DELETE_URL:', EXTERNAL_INVOICE_DELETE_URL);
+console.log('FRONTEND_ORIGIN:', FRONTEND_ORIGIN);
+
+
 
 
 // Login endpoint - forwards to external auth service and normalizes response
@@ -135,7 +147,7 @@ app.post('/api/login', async (req, res) => {
         },
         email: body.email,
         phone: body.phone,
-        avatar: body.avatar 
+        avatar: body.avatar
       },
       auth: {
         token: body.token,
@@ -158,7 +170,7 @@ app.post('/api/login', async (req, res) => {
 app.put('/api/user/update', async (req, res) => {
   // 1. Debug: Check what the BFF actually received from the UI
   console.log('BFF received body:');
-  
+
   const userPayload = req.body.user || req.body; // Fallback if 'user' key is missing
 
   try {
@@ -169,8 +181,8 @@ app.put('/api/user/update', async (req, res) => {
     });
 
     // 2. Get response as text first to avoid "Unexpected end of JSON"
-    const text = await resp.text(); 
-    
+    const text = await resp.text();
+
     // 3. Only parse if there is actually content
     const data = text ? JSON.parse(text) : { success: true };
 
@@ -311,6 +323,48 @@ app.post('/api/company/create', async (req, res) => {
   }
 });
 
+app.put('/api/company/:id/update', async (req, res) => {
+  console.log('Update company request', req.body);
+  const company = req.body;
+  if (!company || Object.keys(company).length === 0) {
+    return res.status(400).json({ message: 'company payload is required' });
+  }
+
+  try {
+    const target = EXTERNAL_COMPANY_UPDATE_URL; // e.g., https://backend/api/company/update
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_COMPANY_UPDATE_URL not set' });
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    // forward authorization header if client provided a bearer token
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    // allow inserting a BFF API key for outbound requests
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(company),
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External company API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external company service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/company error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
 // Create invoice - forward to external invoices API
 app.post('/api/invoice/create', async (req, res) => {
   console.log('Create invoice request', req.body);
@@ -408,7 +462,7 @@ app.get('/api/invoice/all', async (req, res) => {
 //Delete invoice - forward to external invoices API
 app.delete('/api/invoice/:id', async (req, res) => {
   console.log('Delete invoice request for ID:', req.params.id);
-  
+
 
   try {
     const target = `${EXTERNAL_INVOICE_DELETE_URL}/${req.params.id}`;
@@ -484,7 +538,7 @@ app.get('/api/invoice/:id/download', async (req, res) => {
 
 //Create employee - forward to external employees API
 
-app.post('/api/employee/create', async (req, res) => {
+app.post('/api/employee/upsert', async (req, res) => {
   console.log('Create employee request', req.body);
   const employee = req.body;
   if (!employee || Object.keys(employee).length === 0) {
@@ -820,6 +874,180 @@ app.get('/api/invoice/:id/mark-as-paid', async (req, res) => {
   }
 });
 
+app.post('/api/invoice/:id/replace', async (req, res) => {
+  console.log('Replace invoice request for ID:', req.params.id);
+
+  try {
+    const target = `${EXTERNAL_INVOICE_REPLACE_URL}`.replace('{id}', req.params.id);
+    
+    // 1. DO NOT manually set 'Content-Type'. 
+    // Let the incoming request's boundary (from the UI FormData) pass through.
+    const headers = { ...req.headers };
+    delete headers.host; // Remove host to avoid conflicts with fetch
+    
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    // 2. Use the raw body stream
+    const resp = await fetch(target, {
+      method: 'POST',
+      headers: headers, // This now includes the multipart/form-data + boundary
+      body: req, 
+      duplex: 'half' // Required in some Node versions for streaming request bodies
+    });
+
+    // ... rest of your error handling logic
+    const ct = resp.headers.get('content-type') || '';
+    let body = await (ct.includes('application/json') ? resp.json() : resp.text());
+
+    if (!resp.ok) {
+      return res.status(resp.status).json(body);
+    }
+    return res.status(200).json(body);
+
+  } catch (err) {
+    console.error('BFF Error:', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+const multer = require('multer');
+const FormData = require('form-data');
+const upload = multer(); // Stores file in memory buffer
+
+app.post('/api/timesheet/upload', upload.single('file'), async (req, res) => {
+  console.log('Upload timesheet request received');
+
+  try {
+    const target = EXTERNAL_TIMESHEET_UPLOAD_URL;
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_TIMESHEET_UPLOAD_URL not set' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // 2. Prepare Form Data for the external API
+    const form = new FormData();
+    form.append('file', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+    });
+
+    // Add any other fields from req.body if necessary
+    Object.keys(req.body).forEach(key => {
+      form.append(key, req.body[key]);
+    });
+
+    // 3. Setup Headers
+    // Important: Do NOT manually set 'Content-Type'; form-data handles the boundary.
+    const headers = {
+      ...form.getHeaders()
+    };
+
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'POST',
+      headers,
+      body: form, // Forward the multi-part form
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+
+    if (ct.includes('application/json')) {
+      body = await resp.json().catch(() => null);
+    } else {
+      body = await resp.text().catch(() => null);
+    }
+
+    if (!resp.ok) {
+      console.error('External API error', resp.status, body);
+      return res.status(resp.status).json({
+        message: (body && body.message) || body || 'external service error',
+        details: body
+      });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF upload error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+app.get('/api/timesheet/:id/fetch', async (req, res) => {
+  console.log('Get timesheet request for ID:', req.params.id);
+
+  try {
+    const target = `${EXTERNAL_TIMESHEET_GET_URL}`.replace('{id}', req.params.id);
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_TIMESHEET_GET_URL not set' });
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'GET',
+      headers,
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/timesheet/:id error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+app.get('/api/notification/all', async (req, res) => {
+  console.log('Get notification request');
+  try {
+
+    const target = `${EXTERNAL_NOTIFICATION_GET_URL}`;
+        console.log('Get notification request: ', target);
+    if (!target) {
+      return res.status(500).json({ message: 'BFF misconfiguration: EXTERNAL_NOTIFICATION_GET_URL not set' });
+    }
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
+    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+
+    const resp = await fetch(target, {
+      method: 'GET',
+      headers,
+    });
+
+    const ct = resp.headers.get('content-type') || '';
+    let body = null;
+    if (ct.includes('application/json')) body = await resp.json().catch(() => null);
+    else body = await resp.text().catch(() => null);
+
+    if (!resp.ok) {
+      console.error('External API error', resp.status, body);
+      return res.status(resp.status).json({ message: (body && body.message) || body || 'external service error', details: body });
+    }
+
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error('BFF /api/notification error', err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+})
 
 
 

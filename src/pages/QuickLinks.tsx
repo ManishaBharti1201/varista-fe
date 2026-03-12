@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   ChevronRight, ExternalLink,
-  MapPin, Globe, ChevronDown
+  MapPin, Globe, ChevronDown, Landmark, ShieldCheck, Briefcase
 } from 'lucide-react';
 
 export default function CentralStateLinks() {
-  const [activeMenu, setActiveMenu] = useState('Central & State Links');
   const [selectedState, setSelectedState] = useState('');
   const [showStateLinks, setShowStateLinks] = useState(false);
 
@@ -13,226 +12,164 @@ export default function CentralStateLinks() {
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
     'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
     'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
-    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands',
-    'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Lakshadweep', 'Delhi', 'Puducherry',
-    'Jammu and Kashmir', 'Ladakh'
+    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu and Kashmir'
   ];
 
   const centralLinks = [
     {
       category: 'Tax & Revenue',
+      icon: <Landmark className="text-indigo-600" size={20} />,
       links: [
-        { title: 'IRS - Internal Revenue Service', url: 'https://www.irs.gov', description: 'Central tax information and filing' },
-        { title: 'Social Security Administration', url: 'https://www.ssa.gov', description: 'Social security benefits and information' },
-        { title: 'Medicare', url: 'https://www.medicare.gov', description: 'Medicare enrollment and coverage' }
+        { title: 'Income Tax Department', url: 'https://www.incometax.gov.in', description: 'Central tax filing, PAN services, and compliance.' },
+        { title: 'GST Portal', url: 'https://www.gst.gov.in', description: 'Goods and Services Tax registration and returns.' },
+        { title: 'EPFO Services', url: 'https://www.epfindia.gov.in', description: 'Employee Provident Fund management and tracking.' }
       ]
     },
     {
-      category: 'Labor & Employment',
+      category: 'Labor & Compliance',
+      icon: <ShieldCheck className="text-emerald-600" size={20} />,
       links: [
-        { title: 'Department of Labor', url: 'https://www.dol.gov', description: 'Central labor standards and regulations' },
-        { title: 'EEOC - Equal Employment Opportunity', url: 'https://www.eeoc.gov', description: 'Equal employment opportunity information' },
-        { title: 'OSHA - Occupational Safety', url: 'https://www.osha.gov', description: 'Workplace safety and health standards' }
-      ]
-    },
-    {
-      category: 'Benefits & Insurance',
-      links: [
-        { title: 'Healthcare.gov', url: 'https://www.healthcare.gov', description: 'Health insurance marketplace' },
-        { title: 'FMLA Information', url: 'https://www.dol.gov/agencies/whd/fmla', description: 'Family and Medical Leave Act details' },
-        { title: 'E-Verify', url: 'https://www.e-verify.gov', description: 'Employment verification system' }
+        { title: 'Ministry of Labour', url: 'https://labour.gov.in', description: 'Central labor standards, safety, and regulations.' },
+        { title: 'ESIC Portal', url: 'https://www.esic.gov.in', description: 'Employee State Insurance Corporation services.' },
+        { title: 'Shram Suvidha', url: 'https://shramsuvidha.gov.in', description: 'Unified portal for Labor and Employment compliance.' }
       ]
     }
   ];
 
-  const getStateLinks = (selectedState: string) => {
-    return [
-      {
-        category: 'State Tax & Revenue',
-        links: [
-          { title: `${selectedState} Department of Revenue`, url: '#', description: 'State tax filing and information' },
-          { title: `${selectedState} Unemployment Insurance`, url: '#', description: 'Unemployment benefits and claims' },
-          { title: `${selectedState} Workers Compensation`, url: '#', description: 'Workers compensation information' }
-        ]
-      },
-      {
-        category: 'State Labor & Employment',
-        links: [
-          { title: `${selectedState} Department of Labor`, url: '#', description: 'State labor laws and regulations' },
-          { title: `${selectedState} Wage and Hour Division`, url: '#', description: 'Minimum wage and overtime rules' },
-          { title: `${selectedState} Employment Security`, url: '#', description: 'Employment and job services' }
-        ]
-      },
-      {
-        category: 'State Business & Compliance',
-        links: [
-          { title: `${selectedState} Secretary of State`, url: '#', description: 'Business registration and filing' },
-          { title: `${selectedState} Business Licensing`, url: '#', description: 'Business license information' },
-          { title: `${selectedState} Labor Law Posters`, url: '#', description: 'Required workplace posters' }
-        ]
-      }
-    ];
-  };
+  const getStateLinks = (state: string) => [
+    {
+      category: `${state} Tax & Revenue`,
+      icon: <Landmark className="text-indigo-600" size={20} />,
+      links: [
+        { title: `${state} Commercial Taxes`, url: '#', description: 'State-specific professional tax and VAT info.' },
+        { title: 'State Revenue Portal', url: '#', description: 'Local revenue and land record compliance.' }
+      ]
+    },
+    {
+      category: 'Labor & Business',
+      icon: <Briefcase className="text-emerald-600" size={20} />,
+      links: [
+        { title: `${state} Labour Dept.`, url: '#', description: 'State-specific labor laws and shop act licenses.' },
+        { title: 'Employment Exchange', url: '#', description: 'State employment services and skill registry.' }
+      ]
+    }
+  ];
 
   const handleStateSelection = (state: string) => {
     setSelectedState(state);
-    setShowStateLinks(true);
-  }
+    setShowStateLinks(!!state);
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Page Content */}
-        <div className="flex-1 overflow-y-auto p-8">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Central & State Links</h1>
-            <p className="text-gray-600">Quick access to central and state compliance resources</p>
-          </div>
-          {/* Navigation Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Central Links Button */}
-            <button
-              onClick={() => { setShowStateLinks(false); setSelectedState(''); }}
-              className="bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-8 rounded-xl shadow-lg transition-all transform hover:scale-105"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 rounded-lg">
-                  <Globe className="w-8 h-8 text-white" />
-                </div>
-                <ExternalLink className="w-6 h-6 text-white/80" />
+    <div className="min-h-screen bg-[#F8FAFC] pb-12">
+      {/* 1. Brand Header */}
+      <div className="bg-[#1A233A] px-6 py-10 md:px-12 md:py-16 text-white rounded-b-[3rem] relative overflow-hidden shadow-2xl mb-8">
+        <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight">Compliance Resources</h1>
+          <p className="text-slate-400 font-medium mt-1 uppercase text-xs tracking-[0.2em]">Central & State Governance Links</p>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 md:px-8">
+        {/* 2. Top Navigation Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          {/* Central Trigger */}
+          <button
+            onClick={() => { setShowStateLinks(false); setSelectedState(''); }}
+            className={`p-8 rounded-[2.5rem] transition-all duration-300 group text-left relative overflow-hidden ${
+              !showStateLinks ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-200' : 'bg-white border border-slate-100 text-slate-900 shadow-sm hover:border-indigo-200'
+            }`}
+          >
+            <div className="relative z-10">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-colors ${!showStateLinks ? 'bg-white/20' : 'bg-indigo-50 text-indigo-600'}`}>
+                <Globe size={28} />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Central Links</h2>
-              <p className="text-blue-100">Access central government resources and compliance information</p>
-            </button>
+              <h2 className="text-2xl font-black mb-2">Central Links</h2>
+              <p className={`text-sm font-medium ${!showStateLinks ? 'text-indigo-100' : 'text-slate-500'}`}>National governance and federal tax resources</p>
+            </div>
+            {!showStateLinks && <div className="absolute -bottom-4 -right-4 text-white/5"><Globe size={120} /></div>}
+          </button>
 
-            {/* State Links Button */}
-            <div className="bg-gradient-to-br from-green-500 to-green-600 p-8 rounded-xl shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-white/20 rounded-lg">
-                  <MapPin className="w-8 h-8 text-white" />
-                </div>
-                <ExternalLink className="w-6 h-6 text-white/80" />
+          {/* State Trigger */}
+          <div className={`p-8 rounded-[2.5rem] transition-all duration-300 relative overflow-hidden ${
+            showStateLinks ? 'bg-emerald-600 text-white shadow-2xl shadow-emerald-200' : 'bg-white border border-slate-100 text-slate-900 shadow-sm hover:border-emerald-200'
+          }`}>
+            <div className="relative z-10">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-colors ${showStateLinks ? 'bg-white/20' : 'bg-emerald-50 text-emerald-600'}`}>
+                <MapPin size={28} />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-4">State Links</h2>
-
-              {/* State Selector */}
-              <div className="space-y-3">
-                <div className="relative">
-                  <select
-                    value={selectedState}
-                    onChange={(e) => handleStateSelection(e.target.value)}
-                    className="w-full px-4 py-3 pr-10 bg-white border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-white text-gray-900 font-medium appearance-none"
-                  >
-                    <option value="">Select a State</option>
-                    {states.map((state) => (
-                      <option key={state} value={state}>{state}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600 pointer-events-none" />
-                </div>
-
-                {/* <button
-                  onClick={handleViewStateLinks}
-                  disabled={!selectedState}
-                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${selectedState
-                    ? 'bg-white text-green-600 hover:bg-green-50'
-                    : 'bg-white/50 text-green-300 cursor-not-allowed'
-                    }`}
+              <h2 className="text-2xl font-black mb-4">State Specific</h2>
+              
+              <div className="relative">
+                <select
+                  value={selectedState}
+                  onChange={(e) => handleStateSelection(e.target.value)}
+                  className={`w-full px-5 py-4 pr-12 rounded-2xl font-black text-xs uppercase tracking-widest appearance-none outline-none border-2 transition-all ${
+                    showStateLinks 
+                    ? 'bg-emerald-700/30 border-emerald-400/30 text-white placeholder-emerald-200' 
+                    : 'bg-slate-50 border-slate-100 text-slate-900'
+                  }`}
                 >
-                  View State Links
-                </button> */}
+                  <option value="" className="text-slate-900">Select Region...</option>
+                  {states.map(s => <option key={s} value={s} className="text-slate-900">{s}</option>)}
+                </select>
+                <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none ${showStateLinks ? 'text-emerald-200' : 'text-slate-400'}`} size={20} />
               </div>
             </div>
+            {showStateLinks && <div className="absolute -bottom-4 -right-4 text-white/5"><MapPin size={120} /></div>}
+          </div>
+        </div>
+
+        {/* 3. Links Section */}
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-4 px-2">
+            <div className={`w-1 h-8 rounded-full ${showStateLinks ? 'bg-emerald-500' : 'bg-indigo-500'}`}></div>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+              {showStateLinks ? `${selectedState} Resources` : 'National Resources'}
+            </h3>
           </div>
 
-          {/* Central Links Section */}
-          {!showStateLinks && !selectedState && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Globe className="w-6 h-6 text-blue-600" />
-                <h2 className="text-2xl font-bold text-gray-900">Central Resources</h2>
-              </div>
-
-              {centralLinks.map((section, index) => (
-                <div key={index} className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">{section.category}</h3>
-                  <div className="space-y-3">
-                    {section.links.map((link, linkIndex) => (
-                      <a
-                        key={linkIndex}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-start gap-4 p-4 rounded-lg hover:bg-blue-50 transition-colors group"
-                      >
-                        <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                          <ExternalLink className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-1 group-hover:text-blue-600">
-                            {link.title}
-                          </h4>
-                          <p className="text-sm text-gray-600">{link.description}</p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                      </a>
-                    ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {(showStateLinks ? getStateLinks(selectedState) : centralLinks).map((section, idx) => (
+              <div key={idx} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm group">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2.5 bg-slate-50 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                    {section.icon}
                   </div>
+                  <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.15em]">{section.category}</h4>
                 </div>
-              ))}
-            </div>
-          )}
 
-          {/* State Links Section */}
-          {showStateLinks && selectedState && (
-            <div className="space-y-6">
-              {/* <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <MapPin className="w-6 h-6 text-green-600" />
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedState} Resources</h2>
+                <div className="space-y-3">
+                  {section.links.map((link, lIdx) => (
+                    <a
+                      key={lIdx}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-4 p-5 rounded-[1.5rem] bg-slate-50/50 border border-transparent hover:bg-white hover:border-slate-100 hover:shadow-md transition-all group/link"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 group-hover/link:text-indigo-600 transition-colors shadow-sm">
+                        <ExternalLink size={18} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-black text-slate-900 group-hover/link:text-indigo-600 transition-colors">{link.title}</p>
+                        <p className="text-[11px] font-bold text-slate-400 leading-tight mt-0.5">{link.description}</p>
+                      </div>
+                      <ChevronRight size={18} className="text-slate-300 group-hover/link:text-indigo-600 transition-all group-hover/link:translate-x-1" />
+                    </a>
+                  ))}
                 </div>
-                <button
-                  onClick={() => setShowStateLinks(false)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
-                >
-                  Back to Selection
-                </button>
-              </div> */}
-
-              {getStateLinks(selectedState).map((section, index) => (
-                <div key={index} className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">{section.category}</h3>
-                  <div className="space-y-3">
-                    {section.links.map((link, linkIndex) => (
-                      <a
-                        key={linkIndex}
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-start gap-4 p-4 rounded-lg hover:bg-green-50 transition-colors group"
-                      >
-                        <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-                          <ExternalLink className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-1 group-hover:text-green-600">
-                            {link.title}
-                          </h4>
-                          <p className="text-sm text-gray-600">{link.description}</p>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> These are placeholder links for {selectedState}. Please update with actual state-specific URLs for your implementation.
-                </p>
               </div>
+            ))}
+          </div>
+
+          {showStateLinks && (
+            <div className="flex gap-4 p-6 bg-indigo-50/50 rounded-[2rem] border border-indigo-100">
+               <ShieldCheck className="text-indigo-600 shrink-0" size={20} />
+               <p className="text-[11px] font-black text-indigo-900/60 uppercase tracking-widest leading-relaxed">
+                 Disclaimer: External state portals may require regional language selection or specific browser extensions for digital signatures.
+               </p>
             </div>
           )}
         </div>

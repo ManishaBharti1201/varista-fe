@@ -16,6 +16,7 @@ import QuotationMgmt from './pages/QuotationMgmt';
 import EmployeeMgmt from './pages/EmployeeMgmt';
 import UserMgmt from './pages/UserMgmt';
 import { useUserStore } from './store/UserStore';
+import ReportsAnalytics from './pages/AnalyticsReports';
 
 const App: React.FC = () => {
   const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -52,6 +53,7 @@ const App: React.FC = () => {
             <Route path="/quotations/manage" element={<QuotationList />} />
           </Route>
           <Route path="/employees" element={<EmployeeMgmt />} />
+          <Route path="/reports" element={<ReportsAnalytics />} />
           <Route path="/quicklinks" element={<QuickLinks />} />
           <Route path="/admin/users" element={<UserMgmt />} />
         </Route>
