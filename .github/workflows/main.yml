@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - React to Docker Hub & VM
+name: CI/CD Pipeline - React to Docker Hub, VM & Android
 
 on:
   push:
@@ -37,6 +37,52 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/varista-fe:latest
 
+  # 📱 NEW: Android Debug APK Job
+  build-android:
+    name: Build Android Debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build React Frontend
+        run: npm run build # Ensure this creates your 'dist' or 'build' folder
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: varista-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+      
+      - name: List files to find APK
+        run: find . -name "*.apk"
+
   deploy:
     name: Deploy to Ubuntu VM
     needs: build-and-push
@@ -49,22 +95,11 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # 1. Navigate to deployment folder
             cd ~/varista || { echo "Directory not found"; exit 1; }
-            
-            # 2. Login to Docker Hub (Uncommented for auth)
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-            
-            # 3. Overwrite the .env file (Added quotes to EOF to prevent variable expansion)
             cat <<'EOF' > .env
             ${{ secrets.ENV_FILE_CONTENT }}
             EOF
-            
-            # 4. Pull images defined in your docker-compose.yml
             docker compose pull
-            
-            # 5. Restart services
             docker compose up -d --force-recreate
-            
-            # 6. Cleanup (Optional but recommended to save disk space)
             docker image prune -f
