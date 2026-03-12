@@ -5,7 +5,7 @@ import LoginRegister from './pages/LoginRegister';
 import Dashboard from './pages/Dashboard';
 import ClientMgmt from './pages/ClientMgmt';
 import Layout from './components/Layout';
-import { isTokenValid, logout } from './utils/auth';
+import { logout } from './utils/auth';
 import InvoiceMgmt from './pages/InvoiceMgmt';
 import InvoiceCreate from './pages/invoice/InvoiceCreate';
 import InvoiceList from './pages/invoice/InvoiceList';

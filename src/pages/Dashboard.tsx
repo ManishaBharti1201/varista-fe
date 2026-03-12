@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Users, Plus, X, Calendar as CalendarIcon, ArrowRight, Clock,
+  Users, Plus, X, Calendar as CalendarIcon, ArrowRight, 
   CalendarDays, IndianRupee, Briefcase, ArrowUpRight, ShieldCheck
 } from "lucide-react";
 

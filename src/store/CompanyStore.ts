@@ -55,7 +55,7 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
   },
 
   createCompany: async (companyData: Partial<Company>) => {
-    const { companies } = get();
+    get();
 
     const payload = {
       ...companyData,

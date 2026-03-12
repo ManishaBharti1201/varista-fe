@@ -1,13 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { endpoints } from '../config/urls';
 import {
-  Mail, Lock, Eye, EyeOff, FileText, CheckCircle2,
+  Mail, Lock, Eye, EyeOff, FileText, 
   AlertCircle, ShieldCheck, Zap, BarChart3, Fingerprint
 } from "lucide-react";
 import { Toast } from "../components/Toast";
 import { useUserStore } from "../store/UserStore";
-import { apiRequest } from "../utils/apiClient";
 
 export default function LoginRegister() {
   const [submitting, setSubmitting] = useState(false);

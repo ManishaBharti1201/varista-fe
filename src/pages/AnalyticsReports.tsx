@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
-  ChevronRight, ChevronLeft, Upload, X, Check,
-  DownloadIcon, Trash2, SendIcon, Calendar as CalendarIcon,
-  FileText, CreditCard, Landmark, Plus, Info
+  ChevronRight, ChevronLeft, Upload, X, 
+  DownloadIcon, Trash2, Calendar as CalendarIcon,
+  FileText, CreditCard, Info
 } from 'lucide-react';
-import { endpoints } from '../config/urls';
-import { apiRequest } from '../utils/apiClient';
 import { Toast } from '../components/Toast';
 
 export default function AnalyticsReports() {
@@ -16,10 +14,9 @@ export default function AnalyticsReports() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [holidayType, setHolidayType] = useState('public');
   const [holidayName, setHolidayName] = useState('');
-  const [selectedTimesheetFile, setSelectedTimesheetFile] = useState<File | null>(null);
+
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ message, type });
 
   // Mock Data
   const [holidays, setHolidays] = useState([

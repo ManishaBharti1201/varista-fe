@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
-  Download, Trash2, ChevronUp, ChevronDown, FilterX, 
-  Search, FileSpreadsheet, Calendar, User, 
-  ArrowRight, FileText, Filter, ReceiptText
+  Download, Trash2, ChevronUp, ChevronDown, 
+  Search, FileSpreadsheet, Calendar, 
+  FileText, ReceiptText
 } from 'lucide-react';
 import { useCompanyStore } from '../../store/CompanyStore';
 import { endpoints } from '../../config/urls';
@@ -22,7 +22,6 @@ export default function QuotationList() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [rows, setRows] = useState<QuotationRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { companies } = useCompanyStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortConfig, setSortConfig] = useState<{ key: keyof QuotationRow; direction: 'asc' | 'desc' } | null>(null);

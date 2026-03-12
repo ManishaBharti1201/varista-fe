@@ -2,8 +2,7 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import {
     Search, ChevronDown, ChevronUp, Users, Calendar, Building2,
     X, Trash2, Clock, Edit3Icon, CheckCircle, UserPlus,
-    ShieldCheck, LogOut, Mail, Smartphone
-} from 'lucide-react';
+    ShieldCheck} from 'lucide-react';
 import { Employee, useEmployeeStore } from '../store/EmployeeStore';
 import { Toast } from '../components/Toast';
 import AttendanceManagement from './Attendence';

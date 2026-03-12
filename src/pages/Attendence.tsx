@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Clock, CheckCircle, ChevronRight, ChevronLeft,
     TimerOff, Calendar as CalendarIcon, ArrowUpRight, ArrowDownLeft
@@ -51,22 +51,6 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
 
         return days;
     }, [currentDate]);
-
-    const getStatusStyles = (status: string | null, isSelected: boolean) => {
-        let base = "relative transition-all duration-200 ";
-        let indicator = "";
-
-        switch (status) {
-            case 'P': indicator = 'bg-emerald-500 text-white shadow-emerald-100'; break;
-            case 'AB': indicator = 'bg-rose-500 text-white shadow-rose-100'; break;
-            case 'HD': indicator = 'bg-purple-500 text-white shadow-purple-100'; break;
-            case 'O': indicator = 'bg-indigo-600 text-white shadow-indigo-100'; break;
-            default: indicator = 'bg-transparent text-slate-400 hover:bg-slate-100'; break;
-        }
-
-        if (isSelected) base += ' ring-2 ring-indigo-600 ring-offset-2 scale-110 z-10';
-        return { base, indicator };
-    };
 
     const selectedRecord = records.find(r => apiToUiDate(r.attendDate) === selectedDate);
 

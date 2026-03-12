@@ -30,7 +30,6 @@ export default function HRMSSystemSettings() {
     confirmPassword: '',
     avatar: ''
   });
-  const [errors, setErrors] = useState<any>({});
   const [profileImage, setProfileImage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);

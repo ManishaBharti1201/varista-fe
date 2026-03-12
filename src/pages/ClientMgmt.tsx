@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  Search, Mail, Phone, Users, Calendar, Building2, X, 
-  IndianRupee, Plus, Filter, MoreVertical, ShieldCheck, 
+  Search, Mail, Phone, Users, X, 
+  IndianRupee, Plus, Filter, ShieldCheck, 
   Briefcase, ArrowUpRight, CheckCircle2 
 } from 'lucide-react';
-import { Company, useCompanyStore } from '../store/CompanyStore';
+import { useCompanyStore } from '../store/CompanyStore';
 import { Toast } from '../components/Toast';
 
 export default function ClientMgmt() {

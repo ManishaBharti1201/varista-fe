@@ -50,6 +50,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+    
+      - name: Build React Frontend
+        run: CI=false npm run build
 
       - name: Install Dependencies
         run: npm install

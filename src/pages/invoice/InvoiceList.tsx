@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
-  Download, Trash2, ChevronUp, ChevronDown, FilterX, 
-  Check, FileUp, Search, Receipt, Calendar, User, 
+  Download, Trash2, ChevronUp, ChevronDown, 
+  Check, FileUp, Search, Receipt, Calendar, 
   MoreHorizontal, FileText, Filter
 } from 'lucide-react';
 import { useCompanyStore } from '../../store/CompanyStore';
