@@ -5,7 +5,7 @@ import LoginRegister from './pages/LoginRegister';
 import Dashboard from './pages/Dashboard';
 import ClientMgmt from './pages/ClientMgmt';
 import Layout from './components/Layout';
-import { logout } from './utils/auth';
+import { isTokenValid, logout } from './utils/auth';
 import InvoiceMgmt from './pages/InvoiceMgmt';
 import InvoiceCreate from './pages/invoice/InvoiceCreate';
 import InvoiceList from './pages/invoice/InvoiceList';
@@ -19,23 +19,23 @@ import { useUserStore } from './store/UserStore';
 import ReportsAnalytics from './pages/AnalyticsReports';
 
 const App: React.FC = () => {
+
+  
   const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-    // Use the state from your store instead of a standalone utility
-    const { user, loading } = useUserStore.getState();
-    const tokenExists = !!localStorage.getItem('token'); // or your specific key
+  const { user, loading } = useUserStore();
+  const hasToken = !!localStorage.getItem('token');
+  const valid = isTokenValid();
 
-    // If the store is still processing the login, show a loader
-    if (loading) return <div>Loading...</div>;
+  if (loading) return <div>Loading...</div>;
 
-    // Check both the store state and the persistent token
-    if (user || tokenExists) {
-      return children;
-    }
-
-    // Only logout and redirect if we are sure there is no user
-    try { logout(); } catch (e) { }
+  // If no user/token or token is expired, redirect to login
+  if (!user && (!hasToken || !valid)) {
     return <Navigate to="/login" replace />;
-  };
+  }
+
+  return children;
+};
+  
 
   return (
     <Router>

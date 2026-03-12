@@ -4,7 +4,7 @@ import { saveAuthFromResponse } from '../utils/auth';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiRequest } from '../utils/apiClient';
 
-// 1. Updated User interface to include joiningDate
+// 1. User interface
 export interface User {
   id: string;
   firstName: string;
@@ -28,12 +28,10 @@ interface UserState {
   login: (credentials: any) => Promise<any>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   updateUserVisuals: () => void;
+  logout: () => void; // Added logout to interface
 }
 
-// Helper functions moved outside for cleanliness
-const generateInitials = (firstName: string = '', lastName: string = '') =>
-  `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() || '??';
-
+// Helper functions
 const generateColor = () => {
   const colors = ['bg-blue-500', 'bg-cyan-500', 'bg-purple-500', 'bg-pink-500', 'bg-green-500', 'bg-orange-500', 'bg-red-500', 'bg-indigo-500'];
   return colors[Math.floor(Math.random() * colors.length)];
@@ -44,6 +42,11 @@ export const useUserStore = create<UserState>()(
     (set, get) => ({
       user: null,
       loading: false,
+
+      // Resets the state and clears the persisted storage
+      logout: () => {
+        set({ user: null, loading: false });
+      },
 
       updateUser: async (userData: Partial<User>) => {
         set({ loading: true });
@@ -56,9 +59,12 @@ export const useUserStore = create<UserState>()(
 
           const updatedUser = await res.json();
           set((state) => ({
-            user: { ...state.user, ...updatedUser },
+            user: state.user ? { ...state.user, ...updatedUser } : updatedUser,
             loading: false
           }));
+          
+          // Refresh visuals in case name/color changed
+          get().updateUserVisuals();
         } catch (err) {
           console.error('Failed to update user', err);
           set({ loading: false });
@@ -78,28 +84,25 @@ export const useUserStore = create<UserState>()(
           const data = await res.json();
 
           if (!res.ok) {
-            // Throwing allows the component's catch block to handle the error message
             console.error('Login failed at store', data);
             throw new Error(data.message || 'Login failed');
           }
 
-          // Store auth bits (Tokens, etc)
+          // 1. Store auth tokens in localStorage via your utility
           saveAuthFromResponse(data.auth, data.user.firstName);
 
-          // Update Zustand state
+          // 2. Update Zustand state
           set({
             user: data.user,
             loading: false
           });
 
+          // 3. Apply visual formatting (avatar, colors, dates)
           get().updateUserVisuals();
 
-          // 2. RETURN the data so the LoginRegister page can access it
           return data;
-
         } catch (err: any) {
           set({ loading: false, user: null });
-          // Re-throw so the UI knows an error occurred
           throw err;
         }
       },
@@ -112,7 +115,6 @@ export const useUserStore = create<UserState>()(
         const avatar = user.avatar || dummyImageBase64;
         const color = user.color || generateColor();
 
-        // Optional: Format joiningDate if it exists
         let joiningDate = user.joiningDate;
         if (joiningDate) {
           joiningDate = new Date(joiningDate).toLocaleDateString(undefined, {
@@ -126,8 +128,8 @@ export const useUserStore = create<UserState>()(
       }
     }),
     {
-      name: 'user-storage', // unique key for localStorage
-      storage: createJSONStorage(() => localStorage), // defines where to save it
+      name: 'user-storage',
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

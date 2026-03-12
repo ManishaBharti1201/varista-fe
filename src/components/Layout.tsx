@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { Menu, Bell, LogOut, X, Clock, CheckCircle2, AlertCircle, Info } from 'lucide-react';
-import { logout as authLogout } from '../utils/auth';
+import { logout as authLogout, logout } from '../utils/auth';
 import { useUserStore } from '../store/UserStore';
 import { apiRequest } from '../utils/apiClient';
 import { endpoints } from '../config/urls';
@@ -22,7 +22,7 @@ export default function Layout() {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   const { user } = useUserStore();
 
   const userName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : 'Admin User';
@@ -46,13 +46,12 @@ export default function Layout() {
   }, [isNotifOpen]);
 
   const handleLogout = () => {
-    try { authLogout(); } catch (e) { console.warn('Logout failed', e); }
-    window.location.href = '/login';
+    logout(); // That's it.
   };
 
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans">
-      
+
       {/* SIDEBAR */}
       <div className={`fixed inset-y-0 left-0 z-[60] w-72 transform lg:relative lg:z-0 lg:translate-x-0 transition-transform duration-300 ease-in-out bg-white shadow-2xl lg:shadow-none
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -75,10 +74,10 @@ export default function Layout() {
         </div>
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {loading ? (
-             <div className="flex flex-col items-center justify-center h-40 space-y-3">
-               <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Syncing Feed...</p>
-             </div>
+            <div className="flex flex-col items-center justify-center h-40 space-y-3">
+              <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Syncing Feed...</p>
+            </div>
           ) : notifications.length > 0 ? (
             notifications.map((notif) => (
               <div key={notif.id} className={`p-5 rounded-2xl border transition-all hover:shadow-md cursor-pointer group ${notif.isRead ? 'bg-white border-slate-100' : 'bg-indigo-50/30 border-indigo-100 shadow-sm'}`}>
@@ -109,7 +108,7 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 md:px-8 flex items-center sticky top-0 z-40">
           <div className="flex-1 flex items-center justify-between">
-            
+
             {/* Left: Branding/Context (Replaces Search) */}
             <div className="flex items-center gap-4">
               <button className="p-2.5 hover:bg-slate-100 rounded-xl lg:hidden text-slate-600 transition-all active:scale-90" onClick={() => setIsSidebarOpen(true)}>
@@ -123,9 +122,9 @@ export default function Layout() {
 
             {/* Right: Integrated Action Cluster */}
             <div className="flex items-center bg-slate-50/80 border border-slate-100 p-1.5 rounded-[1.5rem] md:gap-2">
-              
+
               {/* Notifications */}
-              <button 
+              <button
                 onClick={() => setIsNotifOpen(true)}
                 className={`relative p-2.5 rounded-xl transition-all ${isNotifOpen ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm'}`}
               >
@@ -147,8 +146,8 @@ export default function Layout() {
               </div>
 
               {/* Logout */}
-              <button 
-                onClick={handleLogout} 
+              <button
+                onClick={handleLogout}
                 className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all flex items-center gap-2"
                 title="Secure Logout"
               >
