@@ -1,10 +1,11 @@
 name: CI/CD Pipeline - React to Docker Hub, VM & Android
+
 on:
   push:
     branches: [ main ]
 
 jobs:
-  # 1. Start the Slack Thread and get the ID
+  # 1. Start the Slack Thread
   init-notifications:
     name: Start Slack Thread
     runs-on: ubuntu-latest
@@ -18,7 +19,16 @@ jobs:
           channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           payload: |
             {
-              "text": "🚀 *Pipeline Started:* `${{ github.event.head_commit.message }}`"
+              "text": "🚀 *Pipeline Started:* `${{ github.event.head_commit.message }}`",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🚀 *Pipeline Started*\n*Repo:* ${{ github.repository }}\n*Commit:* `${{ github.event.head_commit.message }}`"
+                  }
+                }
+              ]
             }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -30,7 +40,7 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
+      
       - name: Notify Job Start
         uses: slackapi/slack-github-action@v1.27.0
         with:
@@ -45,8 +55,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push images
+      
+      - name: Build and push BFF/Frontend
         uses: docker/build-push-action@v4
         with:
           push: true
@@ -58,7 +68,10 @@ jobs:
         with:
           channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           thread-ts: ${{ needs.init-notifications.outputs.thread_ts }}
-          payload: '{"text": "${{ job.status == "success" && "✅ Docker Images Pushed" || "❌ Docker Build Failed" }}"}'
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && '✅ Docker Images Pushed' || '❌ Docker Build Failed' }}"
+            }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
@@ -79,7 +92,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      # --- CRITICAL: These steps must exist in THIS job ---
+      # --- Setup Environment for Android Build ---
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -96,16 +109,22 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
-      - name: Sync and Build
+      - name: Build React Frontend
+        run: CI=false npm run build
+
+      - name: Sync and Build APK
         run: |
           npx cap sync android
-          cd android && chmod +x gradlew && ./gradlew assembleDebug
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: varista-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
 
       - name: Notify Job Status
         if: always()
@@ -113,7 +132,10 @@ jobs:
         with:
           channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           thread-ts: ${{ needs.init-notifications.outputs.thread_ts }}
-          payload: '{"text": "${{ job.status == "success" && "✅ Android APK Ready" || "❌ Android Build Failed" }}"}'
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && '✅ Android APK Ready' || '❌ Android Build Failed' }}"
+            }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
@@ -138,8 +160,14 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/varista || exit 1
-            docker compose pull && docker compose up -d --force-recreate
+            cd ~/varista || { echo "Directory not found"; exit 1; }
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            cat <<'EOF' > .env
+            ${{ secrets.ENV_FILE_CONTENT }}
+            EOF
+            docker compose pull
+            docker compose up -d --force-recreate
+            docker image prune -f
 
       - name: Final Pipeline Status
         if: always()
@@ -147,6 +175,9 @@ jobs:
         with:
           channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           thread-ts: ${{ needs.init-notifications.outputs.thread_ts }}
-          payload: '{"text": "🏁 *Deployment ${{ job.status }}!*"}'
+          payload: |
+            {
+              "text": "🏁 *Deployment ${{ job.status }}!*"
+            }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
