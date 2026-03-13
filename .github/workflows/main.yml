@@ -58,19 +58,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
-      - name: Notify Job Start
-        uses: slackapi/slack-github-action@v1.27.0
-        with:
-          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
-          payload: |
-            {
-              "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
-              "thread_ts": "${{ needs.init-notifications.outputs.thread_ts }}",
-              "text": "🛠️ Starting Docker Build & Push..."
-            }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -116,19 +103,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
-      - name: Notify Job Start
-        uses: slackapi/slack-github-action@v1.27.0
-        with:
-          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
-          payload: |
-            {
-              "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
-              "thread_ts": "${{ needs.init-notifications.outputs.thread_ts }}",
-              "text": "📱 Starting Android APK Build..."
-            }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -157,6 +131,7 @@ jobs:
           ./gradlew assembleDebug
 
       - name: Upload APK Artifact
+        id: upload-apk
         uses: actions/upload-artifact@v4
         with:
           name: varista-debug-apk
@@ -179,7 +154,7 @@ jobs:
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": "${{ job.status == 'success' && '✅ *Android APK Ready*' || '❌ *Android Build Failed*' }}\n📦 *Download:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts|Click here to get APK zip>"                    
+                      "text": "${{ job.status == 'success' && '✅ *Android APK Ready*' || '❌ *Android Build Failed*' }}\n📦 *Download:* <${{ steps.upload-apk.outputs.artifact-url }}|Click here to Download APK>"
                     }
                   }
                 ]
@@ -193,19 +168,6 @@ jobs:
     needs: [init-notifications, build-and-push]
     runs-on: ubuntu-latest
     steps:
-      - name: Notify Job Start
-        uses: slackapi/slack-github-action@v1.27.0
-        with:
-          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
-          payload: |
-            {
-              "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
-              "thread_ts": "${{ needs.init-notifications.outputs.thread_ts }}",
-              "text": "🌐 Deploying to VM..."
-            }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
       - name: SSH and Update VM
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -214,6 +176,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/varista || exit 1
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             docker compose pull
             docker compose up -d --force-recreate
 
