@@ -179,7 +179,7 @@ jobs:
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": "${{ job.status == 'success' && '✅ *Android APK Ready*' || '❌ *Android Build Failed*' }}\n📂 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Download APK from Artifacts>"
+                      "text": "${{ job.status == 'success' && '✅ *Android APK Ready*' || '❌ *Android Build Failed*' }}\n📦 *Download:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts|Click here to get APK zip>"                    
                     }
                   }
                 ]
