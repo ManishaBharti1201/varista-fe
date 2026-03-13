@@ -34,7 +34,7 @@ jobs:
       - name: Notify Job Start
         uses: slackapi/slack-github-action@v1.27.0
         with:
-          # Using the ID directly in the 'payload' is the most reliable way
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           payload: |
             {
               "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
@@ -60,6 +60,7 @@ jobs:
         if: always()
         uses: slackapi/slack-github-action@v1.27.0
         with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           payload: |
             {
               "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
@@ -80,6 +81,7 @@ jobs:
       - name: Notify Job Start
         uses: slackapi/slack-github-action@v1.27.0
         with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           payload: |
             {
               "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
@@ -119,6 +121,7 @@ jobs:
         if: always()
         uses: slackapi/slack-github-action@v1.27.0
         with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           payload: |
             {
               "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
@@ -136,6 +139,7 @@ jobs:
       - name: Notify Job Start
         uses: slackapi/slack-github-action@v1.27.0
         with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           payload: |
             {
               "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
@@ -160,6 +164,7 @@ jobs:
         if: always()
         uses: slackapi/slack-github-action@v1.27.0
         with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
           payload: |
             {
               "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
