@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
-  # 1. Start the Slack Thread
+  # 1. Start the Slack Thread (This creates the "Parent" message)
   init-notifications:
     name: Start Slack Thread
     runs-on: ubuntu-latest
@@ -45,6 +45,7 @@ jobs:
         uses: slackapi/slack-github-action@v1.27.0
         with:
           channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          # THIS IS THE KEY: it tells Slack to reply to the first message
           thread-ts: ${{ needs.init-notifications.outputs.thread_ts }}
           payload: '{"text": "🛠️ Starting Docker Build & Push..."}'
         env:
@@ -92,7 +93,6 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
-      # --- Setup Environment for Android Build ---
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -118,13 +118,6 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: varista-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 7
 
       - name: Notify Job Status
         if: always()
@@ -160,14 +153,9 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/varista || { echo "Directory not found"; exit 1; }
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-            cat <<'EOF' > .env
-            ${{ secrets.ENV_FILE_CONTENT }}
-            EOF
+            cd ~/varista || exit 1
             docker compose pull
             docker compose up -d --force-recreate
-            docker image prune -f
 
       - name: Final Pipeline Status
         if: always()
