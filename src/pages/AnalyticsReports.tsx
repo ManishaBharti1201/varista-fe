@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ChevronRight, ChevronLeft, Upload, X, 
   DownloadIcon, Trash2, Calendar as CalendarIcon,
@@ -13,22 +13,184 @@ export default function AnalyticsReports() {
   const [showHolidayModal, setShowHolidayModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [holidayType, setHolidayType] = useState('public');
+  const [uploading, setUploading] = useState(false);
   const [holidayName, setHolidayName] = useState('');
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
 
   // Mock Data
-  const [holidays, setHolidays] = useState([
-    { date: new Date(2026, 0, 26), name: 'Republic Day', type: 'national' },
-    { date: new Date(2026, 4, 1), name: 'Maharashtra Day', type: 'public' },
-    { date: new Date(2026, 7, 15), name: 'Independence Day', type: 'national' },
-  ]);
+  const [holidays, setHolidays] = useState<any[]>([]);
 
-  const [attendanceData] = useState([
-    { id: '1', fileNme: 'Feb_Attendance_Final.csv', month: 'February', createDate: '2026-03-01' },
-    { id: '2', fileNme: 'Jan_Attendance_v2.xlsx', month: 'January', createDate: '2026-02-02' },
-  ]);
+  const fetchHolidays = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/all`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setHolidays(data.map((h: any) => {
+          // Parse YYYY-MM-DD string to local Date to avoid timezone offsets
+          const [year, month, day] = h.date.split('-').map(Number);
+          return { 
+            ...h, 
+            date: new Date(year, month - 1, day),
+            type: h.type === 'PH' ? 'public' : h.type === 'NH' ? 'national' : h.type
+          };
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to load holidays', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchHolidays();
+    if (localStorage.getItem('token')) {
+      fetchBlobs();
+    }
+  }, []);
+
+  const fetchBlobs = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blobs`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAttendanceData(data);
+      }
+    } catch (err) {
+      console.error('Failed to load muster records', err);
+    }
+  };
+
+  const handleDownloadBlob = async (id: string, fileName: string) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blob/${id}/download`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        setToast({ message: 'Failed to download file', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Error downloading file', type: 'error' });
+    }
+  };
+
+  const handleDeleteBlob = async (id: string) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blob/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        setToast({ message: 'Log deleted successfully', type: 'success' });
+        fetchBlobs();
+      } else {
+        setToast({ message: 'Failed to delete log', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Error deleting log', type: 'error' });
+    }
+  };
+
+  const handleSaveHoliday = async () => {
+    if (!holidayName || !selectedDate) return;
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          date: selectedDate.toISOString().split('T')[0],
+          name: holidayName,
+          type: holidayType === 'public' ? 'PH' : 'NH'
+        })
+      });
+      if (response.ok) {
+        setToast({ message: 'Holiday saved successfully', type: 'success' });
+        setShowHolidayModal(false);
+        setHolidayName('');
+        fetchHolidays();
+      } else {
+        setToast({ message: 'Failed to save holiday', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Error saving holiday', type: 'error' });
+    }
+  };
+
+  const handleDeleteHoliday = async () => {
+    const holiday = isHoliday(selectedDate);
+    if (!holiday) return;
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          date: holiday.date.toISOString().split('T')[0],
+          type: holiday.type === 'public' ? 'PH' : 'NH'
+        })
+      });
+      if (response.ok) {
+        setToast({ message: 'Holiday removed successfully', type: 'success' });
+        setShowHolidayModal(false);
+        fetchHolidays();
+      } else {
+        setToast({ message: 'Failed to remove holiday', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Error removing holiday', type: 'error' });
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/timesheet/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        setToast({ message: 'Timesheet uploaded and processed', type: 'success' });
+        setShowUploadModal(false);
+        fetchBlobs();
+      } else {
+        setToast({ message: 'Failed to upload timesheet', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Error connecting to upload service', type: 'error' });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -88,8 +250,7 @@ export default function AnalyticsReports() {
         <div className="flex p-1.5 bg-white rounded-2xl shadow-sm border border-slate-100 mb-8 w-fit overflow-x-auto">
           {[
             { id: 'calendar', label: 'Holiday Calendar', icon: CalendarIcon },
-            { id: 'muster', label: 'Muster Data', icon: FileText },
-            { id: 'payroll', label: 'Payroll Data', icon: CreditCard }
+            { id: 'muster', label: 'Muster Data', icon: FileText }
           ].map(tab => (
             <button
               key={tab.id}
@@ -188,17 +349,21 @@ export default function AnalyticsReports() {
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><FileText size={16}/></div>
-                          <span className="text-sm font-bold text-slate-600">{r.fileNme}</span>
+                          <span className="text-sm font-bold text-slate-600">{r.fileName}</span>
                         </div>
                       </td>
                       <td className="px-6 py-5 text-center">
-                        <span className="px-4 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">{r.month}</span>
+                        <span className="px-4 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">{r.generatedMonth}</span>
                       </td>
-                      <td className="px-6 py-5 text-center text-xs font-bold text-slate-400">{r.createDate}</td>
+                      <td className="px-6 py-5 text-center text-xs font-bold text-slate-400">{r.creationDate}</td>
                       <td className="px-8 py-5">
                         <div className="flex items-center justify-end gap-2">
-                          <button className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all"><DownloadIcon size={16}/></button>
-                          <button className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-all"><Trash2 size={16}/></button>
+                          <button onClick={() => handleDownloadBlob(r.id, r.fileName)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+                            <DownloadIcon size={16}/>
+                          </button>
+                          <button onClick={() => handleDeleteBlob(r.id)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-all">
+                            <Trash2 size={16}/>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -213,20 +378,20 @@ export default function AnalyticsReports() {
                 <div key={r.id} className="bg-white rounded-[2rem] p-5 shadow-sm border border-slate-100">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-[10px] font-black text-slate-300 uppercase">ID: #{r.id}</span>
-                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase">{r.month}</span>
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase">{r.generatedMonth}</span>
                   </div>
                   <div className="flex items-center gap-4 mb-5">
                     <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><FileText size={20}/></div>
                     <div className="overflow-hidden">
-                      <p className="text-sm font-black text-slate-900 truncate">{r.fileNme}</p>
-                      <p className="text-[10px] font-bold text-slate-400">Uploaded: {r.createDate}</p>
+                      <p className="text-sm font-black text-slate-900 truncate">{r.fileName}</p>
+                      <p className="text-[10px] font-bold text-slate-400">Uploaded: {r.creationDate}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="flex-1 py-3 bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                    <button onClick={() => handleDownloadBlob(r.id, r.fileName)} className="flex-1 py-3 bg-slate-50 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
                       <DownloadIcon size={14}/> Download
                     </button>
-                    <button className="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                    <button onClick={() => handleDeleteBlob(r.id)} className="p-3 bg-rose-50 text-rose-600 rounded-xl">
                       <Trash2 size={16}/>
                     </button>
                   </div>
@@ -281,7 +446,10 @@ export default function AnalyticsReports() {
                       </button>
                     ))}
                   </div>
-                  <button className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-900/20 transition-all active:scale-95">
+                  <button 
+                    onClick={handleSaveHoliday}
+                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-900/20 transition-all active:scale-95"
+                  >
                     Save Holiday
                   </button>
                 </>
@@ -291,7 +459,10 @@ export default function AnalyticsReports() {
                     <p className="text-lg font-black text-emerald-600">{isHoliday(selectedDate)?.name}</p>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 mt-1">{isHoliday(selectedDate)?.type} Holiday</p>
                   </div>
-                  <button className="w-full py-4 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all">
+                  <button 
+                    onClick={handleDeleteHoliday}
+                    className="w-full py-4 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all"
+                  >
                     Remove Holiday
                   </button>
                 </div>
@@ -315,9 +486,20 @@ export default function AnalyticsReports() {
                   <Upload size={32}/>
                 </div>
                 <p className="text-sm font-black text-slate-900">Drop timesheet here</p>
-                <p className="text-xs font-medium text-slate-400 mt-1">Supports CSV, XLSX up to 10MB</p>
-                <input type="file" className="hidden" id="file-up" />
-                <label htmlFor="file-up" className="mt-6 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-indigo-600 transition-colors">Select File</label>
+                <p className="text-xs font-medium text-slate-400 mt-1">Supports CSV, XLS, XLSX up to 10MB</p>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  id="file-up" 
+                  onChange={handleFileUpload}
+                  accept=".csv,.xlsx,.xls"
+                />
+                <label 
+                  htmlFor="file-up" 
+                  className={`mt-6 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-indigo-600 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {uploading ? 'Uploading...' : 'Select File'}
+                </label>
               </div>
 
               <div className="flex gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-50">

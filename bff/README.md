@@ -10,7 +10,7 @@ This small BFF forwards authentication requests from the frontend to the externa
 
 ```powershell
 cd bff
-npm install
+npm install axios multer form-data
 ```
 
 3. Run in development:
