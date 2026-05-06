@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 // Import modular routes
@@ -27,6 +28,21 @@ app.use('/api', authenticate, quotationRoutes);
 app.use('/api', authenticate, employeeRoutes);
 app.use('/api', authenticate, companyRoutes);
 app.use('/api', authenticate, notificationRoutes);
+
+// Redirect /login to / since the homepage serves as the login page
+app.get('/login', (req, res) => {
+  console.log(`[${getISTTimestamp()}] Redirecting /login to homepage (/)`);
+  res.redirect('/');
+});
+
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, '../build')));
+
+// Catch-all handler: for any request that doesn't match an API route or static file,
+// send back React's index.html file to support client-side routing.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../build', 'index.html'));
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`[${getISTTimestamp()}] BFF listening on http://localhost:${PORT}`));
