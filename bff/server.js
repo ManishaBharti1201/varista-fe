@@ -30,10 +30,12 @@ app.use('/api', authenticate, companyRoutes);
 app.use('/api', authenticate, notificationRoutes);
 
 // Redirect /login to / since the homepage serves as the login page
-app.get('/login', (req, res) => {
-  console.log(`[${getISTTimestamp()}] Redirecting /login to homepage (/)`);
-  res.redirect('/');
-});
+// This redirect is handled by Nginx for client-side routing.
+// If a request for /login somehow reaches the BFF, this will still redirect to /.
+// app.get('/login', (req, res) => {
+//   console.log(`[${getISTTimestamp()}] Redirecting /login to homepage (/)`);
+//   res.redirect('/');
+// });
 
 // Serve static files from the React app build directory
 app.use(express.static(path.join(__dirname, '../build')));
