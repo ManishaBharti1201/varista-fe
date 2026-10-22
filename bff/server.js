@@ -5,6 +5,7 @@ require('dotenv').config();
 
 // Import modular routes
 const { authRoutes, authenticate, getISTTimestamp } = require('./auth');
+const { publicClients, resolveClient } = require('./clients');
 const holidayRoutes = require('./holiday');
 const timesheetRoutes = require('./timesheet');
 const blobsRoutes = require('./blobs');
@@ -18,16 +19,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get('/api/clients', (_req, res) => res.json(publicClients));
+
 // Register routes under /api
 app.use('/api', authRoutes);
-app.use('/api', authenticate, holidayRoutes);
-app.use('/api', authenticate, timesheetRoutes);
-app.use('/api', authenticate, blobsRoutes);
-app.use('/api', authenticate, invoiceRoutes);
-app.use('/api', authenticate, quotationRoutes);
-app.use('/api', authenticate, employeeRoutes);
-app.use('/api', authenticate, companyRoutes);
-app.use('/api', authenticate, notificationRoutes);
+app.use('/api', authenticate, resolveClient, holidayRoutes);
+app.use('/api', authenticate, resolveClient, timesheetRoutes);
+app.use('/api', authenticate, resolveClient, blobsRoutes);
+app.use('/api', authenticate, resolveClient, invoiceRoutes);
+app.use('/api', authenticate, resolveClient, quotationRoutes);
+app.use('/api', authenticate, resolveClient, employeeRoutes);
+app.use('/api', authenticate, resolveClient, companyRoutes);
+app.use('/api', authenticate, resolveClient, notificationRoutes);
 
 // Redirect /login to / since the homepage serves as the login page
 // This redirect is handled by Nginx for client-side routing.

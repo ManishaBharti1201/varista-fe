@@ -1,13 +1,6 @@
 const express = require('express');
-const fetch = require('node-fetch');
+const { resolveClient, serviceUrl, fetchService } = require('./clients');
 const router = express.Router();
-
-const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
-const EXTERNAL_AUTH_URL = `${EXTERNAL_SERVICE_BASE}/user/login`;
-const EXTERNAL_VERIFY_OTP_URL = `${EXTERNAL_SERVICE_BASE}/user/verify-otp`;
-const EXTERNAL_RESET_PASSWORD_URL = `${EXTERNAL_SERVICE_BASE}/user/resetPassword/{email}`;
-const EXTERNAL_USER_UPDATE_URL = `${EXTERNAL_SERVICE_BASE}/user/update`;
-const EXTERNAL_USER_SESSION_URL = `${EXTERNAL_SERVICE_BASE}/user/me`;
 
 // Helper to get current timestamp in Indian Standard Time (IST)
 const getISTTimestamp = () => new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
@@ -24,20 +17,21 @@ const authenticate = (req, res, next) => {
 };
 
 // Login logic
-router.post('/login', async (req, res) => {
+router.post('/login', resolveClient, async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ message: 'Username and password are required' });
   }
 
   try {
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${EXTERNAL_AUTH_URL}`);
-    const resp = await fetch(EXTERNAL_AUTH_URL, {
+    const externalAuthUrl = serviceUrl(req, '/user/login');
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${externalAuthUrl}`);
+    const resp = await fetchService(req, externalAuthUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, clientId: req.client.id }),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_AUTH_URL}`);
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${externalAuthUrl}`);
 
     const body = await resp.json().catch(() => ({}));
 
@@ -59,12 +53,15 @@ router.post('/login', async (req, res) => {
   }
 });
 
+router.use(resolveClient);
+
 // OTP logic
 router.post('/verify-otp', async (req, res) => {
   const { firebaseToken, userId } = req.body || {};
   try {
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${EXTERNAL_VERIFY_OTP_URL}`);
-    const resp = await fetch(EXTERNAL_VERIFY_OTP_URL, {
+    const target = serviceUrl(req, '/user/verify-otp');
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${target}`);
+    const resp = await fetchService(req, target, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -72,7 +69,7 @@ router.post('/verify-otp', async (req, res) => {
       },
       body: JSON.stringify({ firebaseToken, userId }),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_VERIFY_OTP_URL}`);
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok) return res.status(401).json({ message: 'OTP verification failed' });
@@ -92,10 +89,11 @@ router.get('/session', async (req, res) => {
   try {
     const headers = { 'Accept': 'application/json', 'Authorization': token };
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+    const target = serviceUrl(req, '/user/me');
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${EXTERNAL_USER_SESSION_URL}`);
-    const resp = await fetch(EXTERNAL_USER_SESSION_URL, { method: 'GET', headers });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_USER_SESSION_URL}`);
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${target}`);
+    const resp = await fetchService(req, target, { method: 'GET', headers });
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const body = await resp.json().catch(() => ({}));
 
@@ -123,14 +121,15 @@ router.put('/user/update', async (req, res) => {
     const headers = { 'Content-Type': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+    const target = serviceUrl(req, '/user/update');
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [PUT] ${EXTERNAL_USER_UPDATE_URL}`);
-    const resp = await fetch(EXTERNAL_USER_UPDATE_URL, {
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [PUT] ${target}`);
+    const resp = await fetchService(req, target, {
       method: 'PUT',
       headers,
       body: JSON.stringify(userPayload),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_USER_UPDATE_URL}`);
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const text = await resp.text();
     const data = text ? JSON.parse(text) : { success: true };
@@ -149,10 +148,10 @@ router.put('/user/update', async (req, res) => {
 router.post('/resetPassword/:email', async (req, res) => {
   const email = req.params.email;
   try {
-    const target = EXTERNAL_RESET_PASSWORD_URL.replace('{email}', email);
+    const target = serviceUrl(req, `/user/resetPassword/${encodeURIComponent(email)}`);
 
     console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${target}`);
-    const resp = await fetch(target, {
+    const resp = await fetchService(req, target, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -190,8 +189,10 @@ function normalizeUser(body) {
     auth: {
       token: body.token,
       tokenType: body.tokenType,
+      tokenExpiryTs: body.tokenExpiryTs,
       expiresAt: formatIST(body.tokenExpiryTs),
       refreshToken: body.refreshToken,
+      refreshTokenExpiryTs: body.refreshTokenExpiryTs,
       refreshExpiresAt: formatIST(body.refreshTokenExpiryTs)
     }
   };

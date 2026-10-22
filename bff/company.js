@@ -1,22 +1,18 @@
 const express = require('express');
-const fetch = require('node-fetch');
 const router = express.Router();
 const { getISTTimestamp, formatIST } = require('./auth');
-
-const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
-const EXTERNAL_COMPANY_LIST_URL = `${EXTERNAL_SERVICE_BASE}/company/all`;
-const EXTERNAL_COMPANY_CREATE_URL = `${EXTERNAL_SERVICE_BASE}/company/create`;
-const EXTERNAL_COMPANY_UPDATE_URL = `${EXTERNAL_SERVICE_BASE}/company/updatePayment`;
+const { serviceUrl, fetchService } = require('./clients');
 
 router.get('/company/all', async (req, res) => {
   try {
+    const target = serviceUrl(req, '/company/all');
     const headers = { 'Accept': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${EXTERNAL_COMPANY_LIST_URL}`);
-    const resp = await fetch(EXTERNAL_COMPANY_LIST_URL, { method: 'GET', headers });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_COMPANY_LIST_URL}`);
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${target}`);
+    const resp = await fetchService(req, target, { method: 'GET', headers });
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;
@@ -49,17 +45,18 @@ router.post('/company/create', async (req, res) => {
   }
 
   try {
+    const target = serviceUrl(req, '/company/create');
     const headers = { 'Content-Type': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${EXTERNAL_COMPANY_CREATE_URL}`);
-    const resp = await fetch(EXTERNAL_COMPANY_CREATE_URL, {
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${target}`);
+    const resp = await fetchService(req, target, {
       method: 'POST',
       headers,
       body: JSON.stringify(company),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_COMPANY_CREATE_URL}`);
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;
@@ -83,17 +80,18 @@ router.put('/company/:id/update', async (req, res) => {
   }
 
   try {
+    const target = serviceUrl(req, '/company/updatePayment');
     const headers = { 'Content-Type': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [PUT] ${EXTERNAL_COMPANY_UPDATE_URL}`);
-    const resp = await fetch(EXTERNAL_COMPANY_UPDATE_URL, {
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [PUT] ${target}`);
+    const resp = await fetchService(req, target, {
       method: 'PUT',
       headers,
       body: JSON.stringify(company),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_COMPANY_UPDATE_URL}`);
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;

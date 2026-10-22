@@ -1,46 +1,97 @@
-# Getting Started with Create React App
+# Varista Workforce
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Varista is a workforce-management web application built with React, TypeScript,
+and Tailwind CSS. The repository contains the web frontend, an Express
+backend-for-frontend (BFF), and Capacitor projects for Android and iOS.
 
-## Available Scripts
+The application includes dashboards, company/client records, invoices,
+quotations, employees, user administration, notifications, and timesheet/
+holiday reporting. The BFF proxies authenticated API requests to the configured
+service.
 
-In the project directory, you can run:
+## Multi-client support
 
-### `npm start`
+The frontend loads its client catalog from `GET /api/clients`. Users select a
+client before entering credentials. The selected client's theme and menu
+configuration control the login branding and available application sections.
+Authenticated frontend requests include `X-Client-Id`; login submits `clientId`
+in its JSON body.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+The BFF owns the mapping from client IDs to backend service URLs. Configure
+clients using the `CLIENT_CATALOG_JSON` environment variable in the BFF
+environment. Each client entry requires a unique `id`, `name`, and
+`serviceBaseUrl`; optional fields include `domain`, `apiKey`, `theme`, and
+`menuItems`. The service URL and API key remain server-side. See
+[bff/README.md](./bff/README.md) for the catalog format, supported menu IDs, and
+request-routing details.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+If no catalog is configured, the BFF provides one `Syncra Demo` client and uses
+`EXTERNAL_SERVICE_BASE_URL` (or its existing default). This fallback is for
+local development; configure the real client catalog and service destinations
+before deploying multiple clients.
 
-### `npm test`
+## Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js 22 or later (the frontend Docker build uses Node 22)
+- npm
 
-### `npm run build`
+## Run locally
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Install dependencies once in the frontend and BFF directories:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```powershell
+# From the repository root
+npm ci
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Push-Location .\bff
+npm ci
+Pop-Location
+```
 
-### `npm run eject`
+Start the BFF in one terminal:
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+```powershell
+Set-Location .\bff
+npm start
+```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Start the frontend in a second terminal from the repository root. Point it at
+the local BFF so `/api` calls use the local client catalog and proxy:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```powershell
+$env:REACT_APP_BFF_URL = "http://localhost:4000"
+npm start
+```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+Open [http://localhost:3000](http://localhost:3000). The BFF listens on
+`http://localhost:4000` by default and reads its environment from `bff/.env`.
+The checked-in local BFF environment currently points to the existing shared
+service; login and downstream API operations therefore require that service to
+be reachable. Do not place production credentials or secrets in the frontend
+environment.
 
-## Learn More
+To run the frontend with the default configured BFF instead, omit
+`REACT_APP_BFF_URL`; for local development, explicitly setting it to the
+address above is recommended.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Available frontend commands
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Run these from the repository root:
+
+| Command | Description |
+| --- | --- |
+| `npm start` | Start the React development server |
+| `npm test -- --watchAll=false` | Run tests once |
+| `npm run build` | Create a production build in `build/` |
+
+## Mobile projects
+
+Android and iOS Capacitor project files are under `android/` and `ios/`.
+Capacitor CLI and platform commands are available through the root npm
+dependencies; native builds also require the platform-specific SDKs and tools.
+
+## Docker
+
+The frontend and BFF each have a Dockerfile. See [DOCKER.md](./DOCKER.md) for
+the existing Docker guidance. Local Docker Compose instructions are only
+applicable if a Compose file is present in this checkout.

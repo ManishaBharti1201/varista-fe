@@ -11,6 +11,7 @@ import {
   Briefcase
 } from "lucide-react";
 import { useUserStore } from "../store/UserStore";
+import { useClientStore } from "../store/ClientStore";
 
 interface Props {
   isSidebarOpen: boolean;
@@ -19,13 +20,13 @@ interface Props {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", to: "/" },
-  { icon: Users, label: "Clients", to: "/clients" },
-  { icon: FileText, label: "Invoices", to: "/invoices" },
-  { icon: FileText, label: "Quotations", to: "/quotations" },
-  { icon: Users, label: "Employees", to: "/employees" },
-  { icon: LinkIcon, label: "Quick Links", to: "/quickLinks" },
-  { icon: FileText, label: "Timesheet", to: "/reports" },
+  { key: "dashboard", icon: LayoutDashboard, label: "Dashboard", to: "/" },
+  { key: "clients", icon: Users, label: "Clients", to: "/clients" },
+  { key: "invoices", icon: FileText, label: "Invoices", to: "/invoices" },
+  { key: "quotations", icon: FileText, label: "Quotations", to: "/quotations" },
+  { key: "employees", icon: Users, label: "Employees", to: "/employees" },
+  { key: "quicklinks", icon: LinkIcon, label: "Quick Links", to: "/quicklinks" },
+  { key: "timesheet", icon: FileText, label: "Timesheet", to: "/reports" },
 ];
 
 const adminMenuItems = [
@@ -38,6 +39,9 @@ export default function Sidebar({
   handleLogout,
 }: Props) {
   const { user } = useUserStore();
+  const { clients, selectedClientId } = useClientStore();
+  const selectedClient = clients.find(client => client.id === selectedClientId);
+  const visibleMenuItems = menuItems.filter(item => selectedClient?.menuItems.includes(item.key));
   const userName = user ? `${user.firstName} ${user.lastName}` : 'User';
 
   return (
@@ -49,11 +53,13 @@ export default function Sidebar({
       {/* Header / Logo */}
       <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
-            <Briefcase className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100" style={{ backgroundColor: selectedClient?.theme.primaryColor || '#4f46e5' }}>
+            {selectedClient?.theme.logoUrl
+              ? <img src={selectedClient.theme.logoUrl} alt="" className="w-6 h-6 object-contain" />
+              : <Briefcase className="w-6 h-6 text-white" />}
           </div>
           <div>
-            <h1 className="font-black text-xl tracking-tight text-slate-900">SYNCRA</h1>
+            <h1 className="font-black text-xl tracking-tight text-slate-900">{selectedClient?.theme.appName || 'Syncra'}</h1>
             <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest leading-none">Workforce</p>
           </div>
         </div>
@@ -98,7 +104,7 @@ export default function Sidebar({
         {/* Main Menu */}
         <div className="space-y-1">
           <p className="px-4 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">General</p>
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -106,6 +112,7 @@ export default function Sidebar({
                 to={item.to}
                 onClick={() => setIsSidebarOpen(false)}
                 end={item.to === "/"}
+                style={({ isActive }) => isActive ? { backgroundColor: selectedClient?.theme.primaryColor || '#4f46e5' } : undefined}
                 className={({ isActive }) =>
                   `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                     isActive
@@ -125,7 +132,7 @@ export default function Sidebar({
         </div>
 
         {/* Admin Section - Only shown if user is admin */}
-        {user?.role?.toLowerCase().includes('admin') && (
+        {user?.role?.toLowerCase().includes('admin') && selectedClient?.menuItems.includes('users') && (
           <div className="space-y-1">
             <p className="px-4 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Management</p>
             {adminMenuItems.map((item) => {
@@ -135,6 +142,7 @@ export default function Sidebar({
                   key={item.label}
                   to={item.to}
                   onClick={() => setIsSidebarOpen(false)}
+                  style={({ isActive }) => isActive ? { backgroundColor: selectedClient?.theme.primaryColor || '#4f46e5' } : undefined}
                   className={({ isActive }) =>
                     `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                       isActive

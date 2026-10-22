@@ -5,6 +5,15 @@ import {
   FileText, CreditCard, Info
 } from 'lucide-react';
 import { Toast } from '../components/Toast';
+import { endpoints } from '../config/urls';
+
+const fetch = (input: RequestInfo | URL, init: RequestInit = {}) => {
+  const clientId = localStorage.getItem('selected-client-id');
+  if (!clientId) throw new Error('Select a client before making API requests');
+  const headers = new Headers(init.headers);
+  headers.set('X-Client-Id', clientId);
+  return window.fetch(input, { ...init, headers });
+};
 
 export default function AnalyticsReports() {
   const [activeTab, setActiveTab] = useState('calendar');
@@ -25,7 +34,7 @@ export default function AnalyticsReports() {
 
   const fetchHolidays = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/all`, {
+      const response = await fetch(endpoints.holidayList(), {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (response.ok) {
@@ -54,7 +63,7 @@ export default function AnalyticsReports() {
 
   const fetchBlobs = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blobs`, {
+      const response = await fetch(endpoints.blobs(), {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (response.ok) {
@@ -68,7 +77,7 @@ export default function AnalyticsReports() {
 
   const handleDownloadBlob = async (id: string, fileName: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blob/${id}/download`, {
+      const response = await fetch(endpoints.blobDownload(undefined, id), {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (response.ok) {
@@ -91,7 +100,7 @@ export default function AnalyticsReports() {
 
   const handleDeleteBlob = async (id: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blob/${id}`, {
+      const response = await fetch(endpoints.blobDelete(undefined, id), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -109,7 +118,7 @@ export default function AnalyticsReports() {
   const handleSaveHoliday = async () => {
     if (!holidayName || !selectedDate) return;
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/create`, {
+      const response = await fetch(endpoints.holidayCreate(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +147,7 @@ export default function AnalyticsReports() {
     const holiday = isHoliday(selectedDate);
     if (!holiday) return;
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/delete`, {
+      const response = await fetch(endpoints.holidayDelete(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +179,7 @@ export default function AnalyticsReports() {
     formData.append('file', file);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/timesheet/upload`, {
+      const response = await fetch(endpoints.timesheetUpload(), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

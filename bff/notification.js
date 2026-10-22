@@ -1,23 +1,21 @@
 const express = require('express');
-const fetch = require('node-fetch');
 const router = express.Router();
 const { getISTTimestamp, formatIST } = require('./auth');
-
-const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
-const EXTERNAL_NOTIFICATION_GET_URL = `${EXTERNAL_SERVICE_BASE}/notification/all`;
+const { serviceUrl, fetchService } = require('./clients');
 
 router.get('/notification/all', async (req, res) => {
   try {
+    const target = serviceUrl(req, '/notification/all');
     const headers = { 'Content-Type': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${EXTERNAL_NOTIFICATION_GET_URL}`);
-    const resp = await fetch(EXTERNAL_NOTIFICATION_GET_URL, {
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${target}`);
+    const resp = await fetchService(req, target, {
       method: 'GET',
       headers,
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_NOTIFICATION_GET_URL}`);
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;

@@ -25,7 +25,7 @@ export interface User {
 interface UserState {
   user: User | null;
   loading: boolean;
-  login: (credentials: any) => Promise<any>;
+  login: (credentials: { username: string; password: string; clientId: string }) => Promise<any>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   updateUserVisuals: () => void;
   logout: () => void; // Added logout to interface
@@ -72,7 +72,7 @@ export const useUserStore = create<UserState>()(
         }
       },
 
-      login: async (credentials: Partial<User>) => {
+      login: async (credentials: { username: string; password: string; clientId: string }) => {
         set({ loading: true });
         try {
           const res = await fetch(endpoints.login(), {

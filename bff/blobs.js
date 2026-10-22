@@ -1,20 +1,17 @@
 const express = require('express');
-const fetch = require('node-fetch');
 const router = express.Router();
 const { getISTTimestamp, formatIST } = require('./auth');
-
-const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
-const EXTERNAL_BLOBS_LIST_URL = `${EXTERNAL_SERVICE_BASE}/blob`;
-const EXTERNAL_BLOB_BASE_URL = `${EXTERNAL_SERVICE_BASE}/blob`;
+const { serviceUrl, fetchService } = require('./clients');
 
 router.get('/blobs', async (req, res) => {
   try {
+    const target = serviceUrl(req, '/blob');
     const headers = { 'Accept': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${EXTERNAL_BLOBS_LIST_URL}`);
-    const resp = await fetch(EXTERNAL_BLOBS_LIST_URL, { method: 'GET', headers });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_BLOBS_LIST_URL}`);
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${target}`);
+    const resp = await fetchService(req, target, { method: 'GET', headers });
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const body = await resp.json().catch(() => []);
     if (!resp.ok) return res.status(resp.status).json({ message: 'External service error' });
@@ -33,12 +30,12 @@ router.get('/blobs', async (req, res) => {
 
 router.get('/blob/:id/download', async (req, res) => {
   try {
-    const target = `${EXTERNAL_BLOB_BASE_URL}/${req.params.id}/download`;
+    const target = serviceUrl(req, `/blob/${encodeURIComponent(req.params.id)}/download`);
     const headers = {};
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
 
     console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${target}`);
-    const resp = await fetch(target, { method: 'GET', headers });
+    const resp = await fetchService(req, target, { method: 'GET', headers });
     console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     if (!resp.ok) {
@@ -56,12 +53,12 @@ router.get('/blob/:id/download', async (req, res) => {
 
 router.delete('/blob/:id', async (req, res) => {
   try {
-    const target = `${EXTERNAL_BLOB_BASE_URL}/${req.params.id}`;
+    const target = serviceUrl(req, `/blob/${encodeURIComponent(req.params.id)}`);
     const headers = {};
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
 
     console.log(`[${getISTTimestamp()}] BFF calling external service: [DELETE] ${target}`);
-    const resp = await fetch(target, { method: 'DELETE', headers });
+    const resp = await fetchService(req, target, { method: 'DELETE', headers });
     console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const body = await resp.json().catch(() => ({}));

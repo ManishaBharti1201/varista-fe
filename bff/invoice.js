@@ -1,14 +1,6 @@
 const express = require('express');
-const fetch = require('node-fetch');
+const { serviceUrl, fetchService } = require('./clients');
 const router = express.Router();
-
-const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
-const EXTERNAL_INVOICE_CREATE_URL = `${EXTERNAL_SERVICE_BASE}/invoice/create`;
-const EXTERNAL_INVOICE_LIST_URL = `${EXTERNAL_SERVICE_BASE}/invoice/all`;
-const EXTERNAL_INVOICE_DELETE_URL = `${EXTERNAL_SERVICE_BASE}/invoice`;
-const EXTERNAL_INVOICE_DOWNLOAD_URL = `${EXTERNAL_SERVICE_BASE}/invoice/{id}/download`;
-const EXTERNAL_INVOICE_MARKASPAID_URL = `${EXTERNAL_SERVICE_BASE}/invoice/{id}/mark-as-paid`;
-const EXTERNAL_INVOICE_REPLACE_URL = `${EXTERNAL_SERVICE_BASE}/invoice/{id}/replace`;
 
 router.post('/invoice/create', async (req, res) => {
   const invoice = req.body;
@@ -16,17 +8,18 @@ router.post('/invoice/create', async (req, res) => {
     return res.status(400).json({ message: 'invoice payload is required' });
   }
   try {
+    const target = serviceUrl(req, '/invoice/create');
     const headers = { 'Content-Type': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`BFF calling external service: [POST] ${EXTERNAL_INVOICE_CREATE_URL}`);
-    const resp = await fetch(EXTERNAL_INVOICE_CREATE_URL, {
+    console.log(`BFF calling external service: [POST] ${target}`);
+    const resp = await fetchService(req, target, {
       method: 'POST',
       headers,
       body: JSON.stringify(invoice),
     });
-    console.log(`External service response: [${resp.status}] ${EXTERNAL_INVOICE_CREATE_URL}`);
+    console.log(`External service response: [${resp.status}] ${target}`);
 
     const body = await resp.json().catch(() => null);
     if (!resp.ok) return res.status(resp.status).json({ message: body?.message || 'external service error', details: body });
@@ -40,13 +33,14 @@ router.post('/invoice/create', async (req, res) => {
 
 router.get('/invoice/all', async (req, res) => {
   try {
+    const target = serviceUrl(req, '/invoice/all');
     const headers = { 'Accept': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`BFF calling external service: [GET] ${EXTERNAL_INVOICE_LIST_URL}`);
-    const resp = await fetch(EXTERNAL_INVOICE_LIST_URL, { method: 'GET', headers });
-    console.log(`External service response: [${resp.status}] ${EXTERNAL_INVOICE_LIST_URL}`);
+    console.log(`BFF calling external service: [GET] ${target}`);
+    const resp = await fetchService(req, target, { method: 'GET', headers });
+    console.log(`External service response: [${resp.status}] ${target}`);
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) return res.status(resp.status).json({ message: body?.message || 'external service error', details: body });
@@ -66,13 +60,13 @@ router.get('/invoice/all', async (req, res) => {
 
 router.delete('/invoice/:id', async (req, res) => {
   try {
-    const target = `${EXTERNAL_INVOICE_DELETE_URL}/${req.params.id}`;
+    const target = serviceUrl(req, `/invoice/${encodeURIComponent(req.params.id)}`);
     const headers = { 'Accept': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
     console.log(`BFF calling external service: [DELETE] ${target}`);
-    const resp = await fetch(target, { method: 'DELETE', headers });
+    const resp = await fetchService(req, target, { method: 'DELETE', headers });
     console.log(`External service response: [${resp.status}] ${target}`);
     const body = await resp.json().catch(() => null);
 
@@ -87,13 +81,13 @@ router.delete('/invoice/:id', async (req, res) => {
 
 router.get('/invoice/:id/download', async (req, res) => {
   try {
-    const target = EXTERNAL_INVOICE_DOWNLOAD_URL.replace('{id}', req.params.id);
+    const target = serviceUrl(req, `/invoice/${encodeURIComponent(req.params.id)}/download`);
     const headers = { 'Accept': 'application/pdf' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
     console.log(`BFF calling external service: [GET] ${target}`);
-    const resp = await fetch(target, { method: 'GET', headers });
+    const resp = await fetchService(req, target, { method: 'GET', headers });
     console.log(`External service response: [${resp.status}] ${target}`);
 
     if (!resp.ok) {
@@ -114,13 +108,13 @@ router.get('/invoice/:id/download', async (req, res) => {
 
 router.get('/invoice/:id/mark-as-paid', async (req, res) => {
   try {
-    const target = EXTERNAL_INVOICE_MARKASPAID_URL.replace('{id}', req.params.id);
+    const target = serviceUrl(req, `/invoice/${encodeURIComponent(req.params.id)}/mark-as-paid`);
     const headers = { 'Content-Type': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
     console.log(`BFF calling external service: [GET] ${target}`);
-    const resp = await fetch(target, { method: 'GET', headers });
+    const resp = await fetchService(req, target, { method: 'GET', headers });
     console.log(`External service response: [${resp.status}] ${target}`);
     const body = await resp.json().catch(() => null);
 
@@ -135,13 +129,13 @@ router.get('/invoice/:id/mark-as-paid', async (req, res) => {
 
 router.post('/invoice/:id/replace', async (req, res) => {
   try {
-    const target = EXTERNAL_INVOICE_REPLACE_URL.replace('{id}', req.params.id);
+    const target = serviceUrl(req, `/invoice/${encodeURIComponent(req.params.id)}/replace`);
     const headers = { ...req.headers };
     delete headers.host;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
     console.log(`BFF calling external service: [POST] ${target}`);
-    const resp = await fetch(target, {
+    const resp = await fetchService(req, target, {
       method: 'POST',
       headers: headers,
       body: req,

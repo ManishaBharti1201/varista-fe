@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import {
   Mail, Lock, Eye, EyeOff, FileText, 
@@ -6,11 +6,14 @@ import {
 } from "lucide-react";
 import { Toast } from "../components/Toast";
 import { useUserStore } from "../store/UserStore";
+import { useClientStore } from "../store/ClientStore";
 
 export default function LoginRegister() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useUserStore();
+  const { clients, selectedClientId, loading: loadingClients, error: clientError, loadClients, selectClient } = useClientStore();
+  const selectedClient = clients.find(client => client.id === selectedClientId);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -19,6 +22,10 @@ export default function LoginRegister() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   
   const navigate = useNavigate();
+
+  useEffect(() => {
+    loadClients().catch(() => undefined);
+  }, [loadClients]);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -32,6 +39,7 @@ export default function LoginRegister() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    if (!selectedClientId) newErrors.clientId = "Select a client";
     if (!formData.email) newErrors.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email is invalid";
     if (!formData.password) newErrors.password = "Password is required";
@@ -43,7 +51,7 @@ export default function LoginRegister() {
     if (!validateForm()) return;
     setSubmitting(true);
     try {
-      const response = await login({ username: formData.email, password: formData.password });
+      const response = await login({ username: formData.email, password: formData.password, clientId: selectedClientId });
       if (!response) {
         showToast('Login failed', 'error');
         setSubmitting(false);
@@ -67,10 +75,12 @@ export default function LoginRegister() {
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-20">
             <div className="w-14 h-14 bg-white rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-indigo-900/40">
-              <FileText className="w-8 h-8 text-[#1A233A]" />
+              {selectedClient?.theme.logoUrl
+                ? <img src={selectedClient.theme.logoUrl} alt="" className="w-8 h-8 object-contain" />
+                : <FileText className="w-8 h-8 text-[#1A233A]" />}
             </div>
             <div>
-              <h1 className="font-black text-3xl text-white tracking-tight uppercase">Syncra</h1>
+              <h1 className="font-black text-3xl text-white tracking-tight uppercase">{selectedClient?.theme.appName || 'Syncra'}</h1>
               <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Workforce Hub</p>
             </div>
           </div>
@@ -113,9 +123,11 @@ export default function LoginRegister() {
           {/* Mobile Logo Only */}
           <div className="lg:hidden flex items-center gap-3 mb-12">
             <div className="w-12 h-12 bg-[#1A233A] rounded-2xl flex items-center justify-center">
-              <FileText className="w-7 h-7 text-white" />
+              {selectedClient?.theme.logoUrl
+                ? <img src={selectedClient.theme.logoUrl} alt="" className="w-7 h-7 object-contain" />
+                : <FileText className="w-7 h-7 text-white" />}
             </div>
-            <h1 className="font-black text-xl text-gray-900 tracking-tight uppercase">Syncra</h1>
+            <h1 className="font-black text-xl text-gray-900 tracking-tight uppercase">{selectedClient?.theme.appName || 'Syncra'}</h1>
           </div>
 
           <div className="mb-10 text-center lg:text-left">
@@ -124,6 +136,28 @@ export default function LoginRegister() {
           </div>
 
           <div className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="clientId" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Select Client</label>
+              <select
+                id="clientId"
+                name="clientId"
+                value={selectedClientId}
+                onChange={(event) => {
+                  selectClient(event.target.value);
+                  if (errors.clientId) setErrors(previous => ({ ...previous, clientId: "" }));
+                }}
+                disabled={loadingClients || clients.length === 0}
+                className="w-full px-5 py-4 bg-white border-2 border-slate-100 rounded-[1.5rem] font-bold text-sm text-slate-900 outline-none focus:border-indigo-500/20 focus:ring-4 focus:ring-indigo-500/5 disabled:opacity-60"
+              >
+                <option value="">{loadingClients ? "Loading clients..." : "Choose a client"}</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>{client.name}{client.domain ? ` (${client.domain})` : ""}</option>
+                ))}
+              </select>
+              {clientError && <p role="alert" className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-2">{clientError}</p>}
+              {errors.clientId && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-2">{errors.clientId}</p>}
+            </div>
+
             {/* Email Field */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Corporate Email</label>
@@ -134,6 +168,7 @@ export default function LoginRegister() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  disabled={!selectedClientId}
                   placeholder="admin@syncra.hub"
                   className={`w-full pl-14 pr-6 py-4 bg-white border-2 rounded-[1.5rem] font-bold text-sm transition-all outline-none 
                     ${errors.email ? "border-rose-100 bg-rose-50/30 text-rose-600" : "border-slate-100 focus:border-indigo-500/20 focus:ring-4 focus:ring-indigo-500/5 text-slate-900"}`}
@@ -152,11 +187,13 @@ export default function LoginRegister() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
+                  disabled={!selectedClientId}
                   placeholder="••••••••"
                   className={`w-full pl-14 pr-14 py-4 bg-white border-2 rounded-[1.5rem] font-bold text-sm transition-all outline-none 
                     ${errors.password ? "border-rose-100 bg-rose-50/30 text-rose-600" : "border-slate-100 focus:border-indigo-500/20 focus:ring-4 focus:ring-indigo-500/5 text-slate-900"}`}
                 />
                 <button
+                  type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-indigo-600 transition-colors"
                 >
@@ -174,9 +211,11 @@ export default function LoginRegister() {
             </div>
 
             <button
+              type="button"
               onClick={handleSubmit}
-              disabled={submitting}
-              className="w-full bg-[#1A233A] hover:bg-[#252F4A] text-white py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-indigo-900/20 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-3"
+              disabled={submitting || loadingClients || !selectedClientId}
+              style={{ backgroundColor: selectedClient?.theme.primaryColor || '#1A233A' }}
+              className="w-full text-white py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-indigo-900/20 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-3"
             >
               {submitting ? (
                 <>

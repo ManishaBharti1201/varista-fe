@@ -1,12 +1,7 @@
 const express = require('express');
-const fetch = require('node-fetch');
 const router = express.Router();
 const { getISTTimestamp, formatIST } = require('./auth');
-
-const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
-const EXTERNAL_EMPLOYEE_CREATE_URL = `${EXTERNAL_SERVICE_BASE}/employee/upsert`;
-const EXTERNAL_EMPLOYEE_LIST_URL = `${EXTERNAL_SERVICE_BASE}/employee/all`;
-const EXTERNAL_EMPLOYEE_DELETE_URL = `${EXTERNAL_SERVICE_BASE}/employee`;
+const { serviceUrl, fetchService } = require('./clients');
 
 router.post('/employee/upsert', async (req, res) => {
   const employee = req.body;
@@ -14,17 +9,18 @@ router.post('/employee/upsert', async (req, res) => {
     return res.status(400).json({ message: 'employee payload is required' });
   }
   try {
+    const target = serviceUrl(req, '/employee/upsert');
     const headers = { 'Content-Type': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${EXTERNAL_EMPLOYEE_CREATE_URL}`);
-    const resp = await fetch(EXTERNAL_EMPLOYEE_CREATE_URL, {
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${target}`);
+    const resp = await fetchService(req, target, {
       method: 'POST',
       headers,
       body: JSON.stringify(employee),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_EMPLOYEE_CREATE_URL}`);
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
 
     const body = await resp.json().catch(() => null);
     if (!resp.ok) return res.status(resp.status).json({ message: body?.message || 'external service error', details: body });
@@ -38,13 +34,14 @@ router.post('/employee/upsert', async (req, res) => {
 
 router.get('/employee/all', async (req, res) => {
   try {
+    const target = serviceUrl(req, '/employee/all');
     const headers = { 'Accept': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${EXTERNAL_EMPLOYEE_LIST_URL}`);
-    const resp = await fetch(EXTERNAL_EMPLOYEE_LIST_URL, { method: 'GET', headers });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_EMPLOYEE_LIST_URL}`);
+    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${target}`);
+    const resp = await fetchService(req, target, { method: 'GET', headers });
+    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) return res.status(resp.status).json({ message: body?.message || 'external service error', details: body });
@@ -63,12 +60,12 @@ router.get('/employee/all', async (req, res) => {
 
 router.delete('/employee/:id', async (req, res) => {
   try {
-    const target = `${EXTERNAL_EMPLOYEE_DELETE_URL}/${req.params.id}`;
+    const target = serviceUrl(req, `/employee/${encodeURIComponent(req.params.id)}`);
     const headers = { 'Accept': 'application/json' };
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    const resp = await fetch(target, { method: 'DELETE', headers });
+    const resp = await fetchService(req, target, { method: 'DELETE', headers });
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) return res.status(resp.status).json({ message: body?.message || 'external service error', details: body });

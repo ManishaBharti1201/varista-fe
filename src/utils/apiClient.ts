@@ -8,6 +8,8 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
   }
 
   const token = localStorage.getItem('token');
+  const clientId = localStorage.getItem('selected-client-id');
+  if (!clientId) throw new Error('Select a client before making API requests');
   const headers: Record<string, string> = {
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...((options.headers as Record<string, string>) || {}),
@@ -16,6 +18,7 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
+  headers['X-Client-Id'] = clientId;
 
   const response = await fetch(url, { ...options, headers });
 

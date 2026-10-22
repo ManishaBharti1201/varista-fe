@@ -43,7 +43,7 @@ export const isTokenValid = () => {
 export const logout = () => {
   try {
     useUserStore.getState().logout(); // This clears the Zustand state
-    localStorage.clear();             // This clears all tokens
+    ['token', 'tokenExpiryTs', 'refreshToken', 'userName', 'user', 'user-storage'].forEach(key => localStorage.removeItem(key));
     window.location.href = '/login';  // This forces the redirectry
 
   } catch (e) {
