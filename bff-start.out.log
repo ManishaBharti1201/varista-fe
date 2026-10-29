@@ -1,0 +1,7 @@
+
+> varista-bff@0.1.0 start
+> node server.js
+
+[2026-10-26T06:38:38.889Z] BFF listening on http://localhost:4000
+[2026-10-26T06:39:11.423Z] BFF calling external service: [POST] http://localhost:8080/user/login
+[2026-10-26T06:39:11.536Z] External service response: [401] http://localhost:8080/user/login

@@ -8,16 +8,12 @@ const EXTERNAL_VERIFY_OTP_URL = `${EXTERNAL_SERVICE_BASE}/user/verify-otp`;
 const EXTERNAL_RESET_PASSWORD_URL = `${EXTERNAL_SERVICE_BASE}/user/resetPassword/{email}`;
 const EXTERNAL_USER_UPDATE_URL = `${EXTERNAL_SERVICE_BASE}/user/update`;
 const EXTERNAL_USER_SESSION_URL = `${EXTERNAL_SERVICE_BASE}/user/me`;
-
-// Helper to get current timestamp in Indian Standard Time (IST)
-const getISTTimestamp = () => new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-
-// Helper to format an arbitrary date to IST
-const formatIST = (val) => val ? new Date(val).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : null;
+const { tenantHeaders } = require('./tenant');
 
 // Middleware to protect routes and ensure a token is present
 const authenticate = (req, res, next) => {
   if (!req.headers.authorization) {
+    console.warn(`[${new Date().toISOString()}] Blocked unauthorized request to ${req.originalUrl}`);
     return res.status(401).json({ message: 'Authentication required' });
   }
   next();
@@ -31,13 +27,13 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${EXTERNAL_AUTH_URL}`);
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${EXTERNAL_AUTH_URL}`);
     const resp = await fetch(EXTERNAL_AUTH_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: tenantHeaders(req, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ username, password }),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_AUTH_URL}`);
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${EXTERNAL_AUTH_URL}`);
 
     const body = await resp.json().catch(() => ({}));
 
@@ -48,13 +44,16 @@ router.post('/login', async (req, res) => {
     }
 
     if (body.status === 'MFA_REQUIRED') {
+      console.log(`[${new Date().toISOString()}] MFA Required for user: ${body.userId}`);
       return res.json({ status: 'MFA_REQUIRED', userId: body.userId, phone: body.phone });
     }
 
     // Normalization...
-    return res.json(normalizeUser(body));
+    const normalized = normalizeUser(body);
+    console.log(`[${new Date().toISOString()}] Login success: user=${normalized.name}, hasToken=${!!normalized.token}`);
+    return res.json(normalized);
   } catch (err) {
-    console.error(`[${getISTTimestamp()}] BFF /login error:`, err);
+    console.error(`[${new Date().toISOString()}] BFF /login error:`, err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });
@@ -63,74 +62,71 @@ router.post('/login', async (req, res) => {
 router.post('/verify-otp', async (req, res) => {
   const { firebaseToken, userId } = req.body || {};
   try {
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${EXTERNAL_VERIFY_OTP_URL}`);
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${EXTERNAL_VERIFY_OTP_URL}`);
     const resp = await fetch(EXTERNAL_VERIFY_OTP_URL, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...req.headers.authorization ? { 'Authorization': req.headers.authorization } : {}
-      },
+      headers: tenantHeaders(req, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ firebaseToken, userId }),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_VERIFY_OTP_URL}`);
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${EXTERNAL_VERIFY_OTP_URL}`);
 
     const body = await resp.json().catch(() => ({}));
     if (!resp.ok) return res.status(401).json({ message: 'OTP verification failed' });
 
     return res.json({ ...normalizeUser(body), status: 'SUCCESS' });
   } catch (err) {
-    console.error(`[${getISTTimestamp()}] BFF /verify-otp error:`, err);
+    console.error(`[${new Date().toISOString()}] BFF /verify-otp error:`, err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
 // Session validation logic to be called on application load
-router.get('/session', async (req, res) => {
+router.get('/session', authenticate, async (req, res) => {
   const token = req.headers.authorization;
   if (!token) return res.status(401).json({ message: 'No session found' });
 
   try {
-    const headers = { 'Accept': 'application/json', 'Authorization': token };
-    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+    const headers = tenantHeaders(req, { Accept: 'application/json' });
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${EXTERNAL_USER_SESSION_URL}`);
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [GET] ${EXTERNAL_USER_SESSION_URL}`);
     const resp = await fetch(EXTERNAL_USER_SESSION_URL, { method: 'GET', headers });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_USER_SESSION_URL}`);
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${EXTERNAL_USER_SESSION_URL}`);
 
     const body = await resp.json().catch(() => ({}));
 
     if (!resp.ok || ['FAILURE', 'ERROR', 'UNAUTHORIZED'].includes(body.status)) {
+      console.error(`[${new Date().toISOString()}] Session invalid for token provided: ${resp.status}`);
       return res.status(401).json({ message: 'Session expired or invalid' });
     }
 
     const userData = normalizeUser(body);
     // Ensure the current token is preserved in the response
-    if (!userData.auth.token) {
-      userData.auth.token = token.startsWith('Bearer ') ? token.slice(7) : token;
+    const extractedToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+    if (!userData.token) {
+      userData.token = extractedToken;
+      if (userData.auth) userData.auth.token = extractedToken;
     }
 
     return res.json(userData);
   } catch (err) {
-    console.error(`[${getISTTimestamp()}] BFF /api/session error`, err);
+    console.error(`[${new Date().toISOString()}] BFF /api/session error`, err);
     return res.status(500).json({ message: 'BFF internal error' });
   }
 });
 
-router.put('/user/update', async (req, res) => {
+router.put('/user/update', authenticate, async (req, res) => {
   const userPayload = req.body.user || req.body;
 
   try {
-    const headers = { 'Content-Type': 'application/json' };
-    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
-    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+    const headers = tenantHeaders(req, { 'Content-Type': 'application/json' });
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [PUT] ${EXTERNAL_USER_UPDATE_URL}`);
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [PUT] ${EXTERNAL_USER_UPDATE_URL}`);
     const resp = await fetch(EXTERNAL_USER_UPDATE_URL, {
       method: 'PUT',
       headers,
       body: JSON.stringify(userPayload),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${EXTERNAL_USER_UPDATE_URL}`);
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${EXTERNAL_USER_UPDATE_URL}`);
 
     const text = await resp.text();
     const data = text ? JSON.parse(text) : { success: true };
@@ -141,7 +137,7 @@ router.put('/user/update', async (req, res) => {
 
     return res.json(data);
   } catch (err) {
-    console.error(`[${getISTTimestamp()}] BFF /api/user/update error:`, err);
+    console.error(`[${new Date().toISOString()}] BFF /api/user/update error:`, err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });
@@ -151,12 +147,12 @@ router.post('/resetPassword/:email', async (req, res) => {
   try {
     const target = EXTERNAL_RESET_PASSWORD_URL.replace('{email}', email);
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [POST] ${target}`);
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${target}`);
     const resp = await fetch(target, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: tenantHeaders(req, { 'Content-Type': 'application/json' }),
     });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${target}`);
 
     const body = await resp.json().catch(() => null);
 
@@ -166,13 +162,20 @@ router.post('/resetPassword/:email', async (req, res) => {
 
     return res.json(body);
   } catch (err) {
-    console.error(`[${getISTTimestamp()}] BFF /api/resetPassword error`, err);
+    console.error(`[${new Date().toISOString()}] BFF /api/resetPassword error`, err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });
 
 function normalizeUser(body) {
+  const token = body.token || body.accessToken || body.jwt;
+  const name = body.userName || body.name || body.firstName || 'User';
+  const tokenExpiryTs = body.tokenExpiryTs || body.expiresAt || body.exp;
+
   return {
+    name,
+    token,
+    tokenExpiryTs,
     user: {
       id: body.userId,
       name: body.userName || body.name,
@@ -188,18 +191,17 @@ function normalizeUser(body) {
       avatar: body.avatar
     },
     auth: {
-      token: body.token,
-      tokenType: body.tokenType,
-      expiresAt: formatIST(body.tokenExpiryTs),
+      token: body.token || body.accessToken || body.jwt,
+      tokenType: body.tokenType || 'Bearer',
+      expiresAt: body.tokenExpiryTs || body.expiresAt || body.exp,
       refreshToken: body.refreshToken,
-      refreshExpiresAt: formatIST(body.refreshTokenExpiryTs)
-    }
+      refreshExpiresAt: body.refreshTokenExpiryTs || body.refreshExpiresAt
+    },
+    raw: body
   };
 }
 
 module.exports = {
   authRoutes: router,
-  authenticate,
-  getISTTimestamp,
-  formatIST
+  authenticate
 };

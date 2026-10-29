@@ -5,6 +5,8 @@ import {
   FileText, CreditCard, Info
 } from 'lucide-react';
 import { Toast } from '../components/Toast';
+import { apiRequest } from '../utils/apiClient';
+import { endpoints } from '../config/urls';
 
 export default function AnalyticsReports() {
   const [activeTab, setActiveTab] = useState('calendar');
@@ -25,9 +27,7 @@ export default function AnalyticsReports() {
 
   const fetchHolidays = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/all`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await apiRequest(endpoints.holidayList(), { method: 'GET' });
       if (response.ok) {
         const data = await response.json();
         setHolidays(data.map((h: any) => {
@@ -54,9 +54,7 @@ export default function AnalyticsReports() {
 
   const fetchBlobs = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blobs`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await apiRequest(endpoints.blobs(), { method: 'GET' });
       if (response.ok) {
         const data = await response.json();
         setAttendanceData(data);
@@ -68,9 +66,7 @@ export default function AnalyticsReports() {
 
   const handleDownloadBlob = async (id: string, fileName: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blob/${id}/download`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await apiRequest(endpoints.blobDownload(undefined, id), { method: 'GET' });
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -91,10 +87,7 @@ export default function AnalyticsReports() {
 
   const handleDeleteBlob = async (id: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/blob/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await apiRequest(endpoints.blobDelete(undefined, id), { method: 'DELETE' });
       if (response.ok) {
         setToast({ message: 'Log deleted successfully', type: 'success' });
         fetchBlobs();
@@ -109,12 +102,8 @@ export default function AnalyticsReports() {
   const handleSaveHoliday = async () => {
     if (!holidayName || !selectedDate) return;
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/create`, {
+      const response = await apiRequest(endpoints.holidayCreate(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
         body: JSON.stringify({
           date: selectedDate.toISOString().split('T')[0],
           name: holidayName,
@@ -138,12 +127,8 @@ export default function AnalyticsReports() {
     const holiday = isHoliday(selectedDate);
     if (!holiday) return;
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/holiday/delete`, {
+      const response = await apiRequest(endpoints.holidayDelete(), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
         body: JSON.stringify({
           date: holiday.date.toISOString().split('T')[0],
           type: holiday.type === 'public' ? 'PH' : 'NH'
@@ -170,11 +155,8 @@ export default function AnalyticsReports() {
     formData.append('file', file);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BFF_URL}/api/timesheet/upload`, {
+      const response = await apiRequest(endpoints.timesheetUpload(), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
         body: formData
       });
 

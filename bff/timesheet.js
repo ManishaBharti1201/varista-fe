@@ -1,10 +1,11 @@
-const express = require('express');
+﻿const express = require('express');
 const fetch = require('node-fetch');
 const multer = require('multer');
 const FormData = require('form-data');
 const router = express.Router();
+const { tenantHeaders } = require('./tenant');
 const upload = multer();
-const { getISTTimestamp, formatIST } = require('./auth');
+const { authenticate } = require('./auth');
 
 const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
 const EXTERNAL_TIMESHEET_UPLOAD_URL = `${EXTERNAL_SERVICE_BASE}/timesheet/upload`;
@@ -21,17 +22,17 @@ router.post('/timesheet/upload', upload.single('file'), async (req, res) => {
     });
     Object.keys(req.body).forEach(key => form.append(key, req.body[key]));
 
-    const headers = { ...form.getHeaders() };
+    const headers = tenantHeaders(req, {});
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`BFF calling external service: [POST] ${EXTERNAL_TIMESHEET_UPLOAD_URL}`);
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${EXTERNAL_TIMESHEET_UPLOAD_URL}`);
     const resp = await fetch(EXTERNAL_TIMESHEET_UPLOAD_URL, {
       method: 'POST',
       headers,
       body: form,
     });
-    console.log(`External service response: [${resp.status}] ${EXTERNAL_TIMESHEET_UPLOAD_URL}`);
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${EXTERNAL_TIMESHEET_UPLOAD_URL}`);
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;
@@ -54,13 +55,13 @@ router.post('/timesheet/upload', upload.single('file'), async (req, res) => {
 router.get('/timesheet/:id/fetch', async (req, res) => {
   try {
     const target = EXTERNAL_TIMESHEET_GET_URL.replace('{id}', req.params.id);
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = tenantHeaders(req, {});
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${getISTTimestamp()}] BFF calling external service: [GET] ${target}`);
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [GET] ${target}`);
     const resp = await fetch(target, { method: 'GET', headers });
-    console.log(`[${getISTTimestamp()}] External service response: [${resp.status}] ${target}`);
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${target}`);
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;
@@ -73,12 +74,12 @@ router.get('/timesheet/:id/fetch', async (req, res) => {
 
     const normalized = Array.isArray(body) ? body.map(item => ({
       ...item,
-      uploadedOn: formatIST(item.uploadedOn)
+      uploadedOn: item.uploadedOn
     })) : body;
 
     return res.status(resp.status).json(normalized);
   } catch (err) {
-    console.error(`[${getISTTimestamp()}] BFF /api/timesheet/:id/fetch error`, err);
+    console.error(`[${new Date().toISOString()}] BFF /api/timesheet/:id/fetch error`, err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });

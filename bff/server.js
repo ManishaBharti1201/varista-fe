@@ -1,10 +1,10 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
 // Import modular routes
-const { authRoutes, authenticate, getISTTimestamp } = require('./auth');
+const { authRoutes, authenticate } = require('./auth');
 const holidayRoutes = require('./holiday');
 const timesheetRoutes = require('./timesheet');
 const blobsRoutes = require('./blobs');
@@ -29,6 +29,12 @@ app.use('/api', authenticate, employeeRoutes);
 app.use('/api', authenticate, companyRoutes);
 app.use('/api', authenticate, notificationRoutes);
 
+// IMPORTANT: Catch-all for /api routes to prevent them from returning index.html
+// This ensures that if a frontend API call is misspelled, it gets a 404 JSON error.
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ message: `API endpoint not found: [${req.method}] ${req.originalUrl}` });
+});
+
 // Redirect /login to / since the homepage serves as the login page
 // This redirect is handled by Nginx for client-side routing.
 // If a request for /login somehow reaches the BFF, this will still redirect to /.
@@ -47,4 +53,4 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`[${getISTTimestamp()}] BFF listening on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`[${new Date().toISOString()}] BFF listening on http://localhost:${PORT}`));

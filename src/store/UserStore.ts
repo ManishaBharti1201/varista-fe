@@ -3,6 +3,7 @@ import { endpoints } from '../config/urls';
 import { saveAuthFromResponse } from '../utils/auth';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiRequest } from '../utils/apiClient';
+import { useTenantStore } from './TenantStore';
 
 // 1. User interface
 export interface User {
@@ -46,6 +47,9 @@ export const useUserStore = create<UserState>()(
       // Resets the state and clears the persisted storage
       logout: () => {
         set({ user: null, loading: false });
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenExpiryTs');
+        localStorage.removeItem('refreshToken');
       },
 
       updateUser: async (userData: Partial<User>) => {
@@ -75,10 +79,12 @@ export const useUserStore = create<UserState>()(
       login: async (credentials: Partial<User>) => {
         set({ loading: true });
         try {
+          const tenantId = useTenantStore.getState().selectedTenantId;
+          if (!tenantId) throw new Error('Tenant is required');
           const res = await fetch(endpoints.login(), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(credentials)
+            headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },
+                        body: JSON.stringify(credentials)
           });
 
           const data = await res.json();

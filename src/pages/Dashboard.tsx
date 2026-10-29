@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Users, Plus, X, Calendar as CalendarIcon, ArrowRight, 
-  CalendarDays, IndianRupee, Briefcase, ArrowUpRight, ShieldCheck
+  CalendarDays, IndianRupee, Briefcase, ArrowUpRight, ShieldCheck, CheckCircle2, Clock3, Activity
 } from "lucide-react";
 
 interface UpcomingEvent {
@@ -42,7 +42,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 md:pb-12">
+    <div className="min-h-full overflow-x-hidden bg-[#F8FAFC]">
       {/* 1. Header - Optimized Padding for Mobile */}
       <div className="relative overflow-hidden bg-[#1A233A] px-6 py-12 md:px-10 md:py-20 rounded-b-[2.5rem] md:rounded-b-[3.5rem] shadow-2xl">
         <div className="absolute top-[-10%] right-[-5%] w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
@@ -53,7 +53,7 @@ export default function Dashboard() {
               Hello, <span className="text-indigo-400">{userName.split(' ')[0]}</span>
             </h1>
             <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em] mt-1">
-              SYNCRA Command Center • <span className="text-white">{upcomingEvents.length} Events</span>
+              Workforce activity • <span className="text-white">{upcomingEvents.length} Events</span>
             </p>
           </div>
           <div className="bg-white/5 backdrop-blur-xl px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-[2rem] border border-white/10">
@@ -88,14 +88,36 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* 3. Upcoming Events - Full Width Mobile Rows */}
-        <section className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-xl border border-slate-100 p-5 md:p-10">
+        {/* 3. Operational overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          <section className="lg:col-span-2 bg-white rounded-[2rem] md:rounded-[3rem] shadow-xl border border-slate-100 p-5 md:p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center"><Activity className="w-5 h-5 text-emerald-600" /></div>
+                <div><h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Today at a glance</h2><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workforce activity</p></div>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">On track</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-2xl bg-slate-50"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Attendance</p><p className="text-2xl font-black text-slate-900 mt-2">94.8%</p><p className="text-[10px] text-emerald-600 font-bold mt-1">+2.4% this week</p></div>
+              <div className="p-4 rounded-2xl bg-slate-50"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending approvals</p><p className="text-2xl font-black text-slate-900 mt-2">08</p><p className="text-[10px] text-amber-600 font-bold mt-1">Needs your review</p></div>
+              <div className="p-4 rounded-2xl bg-slate-50"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hours logged</p><p className="text-2xl font-black text-slate-900 mt-2">1,248</p><p className="text-[10px] text-indigo-600 font-bold mt-1">This month</p></div>
+            </div>
+            <div className="mt-5 space-y-3">
+              {[['Timesheets synced', '128 employees', 'bg-emerald-100 text-emerald-600', CheckCircle2], ['Payroll review', 'Due tomorrow', 'bg-amber-100 text-amber-600', Clock3]].map(([title, detail, color, Icon]) => (
+                <div key={title as string} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100"><div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color as string}`}><Icon size={16} /></div><div className="flex-1"><p className="text-xs font-black text-slate-800">{title as string}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{detail as string}</p></div><ArrowRight size={14} className="text-slate-300" /></div>
+              ))}
+            </div>
+          </section>
+
+          {/* 4. Upcoming Events */}
+          <section className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-xl border border-slate-100 p-5 md:p-8">
           <div className="flex items-center justify-between mb-6 md:mb-10">
             <div className="flex items-center gap-3 md:gap-4">
               <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-50 rounded-xl md:rounded-2xl flex items-center justify-center">
                 <CalendarDays className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
               </div>
-              <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight">Briefing</h2>
+              <h2 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight">Events</h2>
             </div>
             <button 
               onClick={() => setIsModalOpen(true)}
@@ -105,7 +127,7 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
+          <div className="space-y-4">
             {upcomingEvents.map((event, index) => (
               <div key={index} className="flex items-center gap-4 p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-slate-50 bg-slate-50/30 md:bg-transparent md:hover:bg-slate-50/50 transition-all">
                 <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-[1.25rem] flex items-center justify-center shrink-0 ${event.color}`}>
@@ -121,10 +143,11 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        </section>
+          </section>
+        </div>
       </div>
 
-      {/* 4. Modal - Bottom Sheet Style for Mobile */}
+      {/* 5. Modal - Bottom Sheet Style for Mobile */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-[#1A233A]/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-1/2 duration-500">
