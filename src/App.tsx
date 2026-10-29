@@ -20,6 +20,7 @@ import EmployeeMgmt from './pages/EmployeeMgmt';
 import UserMgmt from './pages/UserMgmt';
 import { useUserStore } from './store/UserStore';
 import ReportsAnalytics from './pages/AnalyticsReports';
+import { useClientStore } from './store/ClientStore';
 
   const TenantLoginGuard: React.FC<{ children: React.ReactElement }> = ({ children }) => {
   const selectedTenantId = useTenantStore(state => state.selectedTenantId);

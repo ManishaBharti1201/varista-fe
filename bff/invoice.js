@@ -1,5 +1,5 @@
-﻿const express = require('express');
-const fetch = require('node-fetch');
+const express = require('express');
+const { serviceUrl, fetchService } = require('./clients');
 const router = express.Router();
 const { tenantHeaders } = require('./tenant');
 const { authenticate } = require('./auth');

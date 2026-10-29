@@ -1,5 +1,4 @@
-﻿const express = require('express');
-const fetch = require('node-fetch');
+const express = require('express');
 const router = express.Router();
 const { tenantHeaders } = require('./tenant');
 const { authenticate } = require('./auth');
@@ -69,7 +68,7 @@ router.delete('/employee/:id', async (req, res) => {
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    const resp = await fetch(target, { method: 'DELETE', headers });
+    const resp = await fetchService(req, target, { method: 'DELETE', headers });
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) return res.status(resp.status).json({ message: body?.message || 'external service error', details: body });

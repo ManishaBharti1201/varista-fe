@@ -1,5 +1,4 @@
-﻿const express = require('express');
-const fetch = require('node-fetch');
+const express = require('express');
 const multer = require('multer');
 const FormData = require('form-data');
 const router = express.Router();
@@ -25,6 +24,7 @@ router.post('/timesheet/upload', upload.single('file'), async (req, res) => {
     const headers = tenantHeaders(req, {});
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+    const target = serviceUrl(req, '/timesheet/upload');
 
     console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${EXTERNAL_TIMESHEET_UPLOAD_URL}`);
     const resp = await fetch(EXTERNAL_TIMESHEET_UPLOAD_URL, {

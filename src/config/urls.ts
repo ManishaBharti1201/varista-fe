@@ -6,6 +6,7 @@ const envBff = (window as any)._env_?.REACT_APP_BFF_URL || process.env.REACT_APP
 export const bffBase: string = envBff || '';
 
 export const endpoints = {
+  clients: (base: string = bffBase) => `${base || ''}/api/clients`,
   login: (base: string = bffBase) => `${base || ''}/api/login`,
   updateUser: (base: string = bffBase) => `${base || ''}/api/user/update`,
   resetPassword: (base: string = bffBase, email: string) => `${base || ''}/api/resetPassword/${encodeURIComponent(email)}`, 
@@ -37,6 +38,12 @@ export const endpoints = {
   blobDelete: (base: string = bffBase, id: string) => `${base || ''}/api/blob/${id}`,
   notificationList: (base: string = bffBase) => `${base || ''}/api/notification/all`,
   health: (base: string = bffBase) => `${base || ''}/api/health`,
+  holidayList: (base: string = bffBase) => `${base || ''}/api/holiday/all`,
+  holidayCreate: (base: string = bffBase) => `${base || ''}/api/holiday/create`,
+  holidayDelete: (base: string = bffBase) => `${base || ''}/api/holiday/delete`,
+  blobs: (base: string = bffBase) => `${base || ''}/api/blobs`,
+  blobDownload: (base: string = bffBase, id: string) => `${base || ''}/api/blob/${id}/download`,
+  blobDelete: (base: string = bffBase, id: string) => `${base || ''}/api/blob/${id}`,
 };
 
 export default {

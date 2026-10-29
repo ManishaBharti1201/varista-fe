@@ -1,5 +1,5 @@
 const express = require('express');
-const fetch = require('node-fetch');
+const { resolveClient, serviceUrl, fetchService } = require('./clients');
 const router = express.Router();
 
 const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
@@ -20,7 +20,7 @@ const authenticate = (req, res, next) => {
 };
 
 // Login logic
-router.post('/login', async (req, res) => {
+router.post('/login', resolveClient, async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ message: 'Username and password are required' });
@@ -57,6 +57,8 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });
+
+router.use(resolveClient);
 
 // OTP logic
 router.post('/verify-otp', async (req, res) => {
@@ -145,7 +147,7 @@ router.put('/user/update', authenticate, async (req, res) => {
 router.post('/resetPassword/:email', async (req, res) => {
   const email = req.params.email;
   try {
-    const target = EXTERNAL_RESET_PASSWORD_URL.replace('{email}', email);
+    const target = serviceUrl(req, `/user/resetPassword/${encodeURIComponent(email)}`);
 
     console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${target}`);
     const resp = await fetch(target, {

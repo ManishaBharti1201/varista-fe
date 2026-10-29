@@ -15,6 +15,7 @@ import {
   Building2
 } from "lucide-react";
 import { useUserStore } from "../store/UserStore";
+import { useClientStore } from "../store/ClientStore";
 
 interface Props {
   isSidebarOpen: boolean;
@@ -42,6 +43,9 @@ export default function Sidebar({
   handleLogout,
 }: Props) {
   const { user } = useUserStore();
+  const { clients, selectedClientId } = useClientStore();
+  const selectedClient = clients.find(client => client.id === selectedClientId);
+  const visibleMenuItems = menuItems.filter(item => selectedClient?.menuItems.includes(item.key));
   const userName = user ? `${user.firstName} ${user.lastName}` : 'User';
 
   return (
@@ -110,6 +114,7 @@ export default function Sidebar({
                 to={item.to}
                 onClick={() => setIsSidebarOpen(false)}
                 end={item.to === "/"}
+                style={({ isActive }) => isActive ? { backgroundColor: selectedClient?.theme.primaryColor || '#4f46e5' } : undefined}
                 className={({ isActive }) =>
                   `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                     isActive
@@ -129,7 +134,7 @@ export default function Sidebar({
         </div>
 
         {/* Admin Section - Only shown if user is admin */}
-        {user?.role?.toLowerCase().includes('admin') && (
+        {user?.role?.toLowerCase().includes('admin') && selectedClient?.menuItems.includes('users') && (
           <div className="space-y-1">
             <p className="px-4 mb-2 text-[9px] font-black text-slate-500 uppercase tracking-[0.25em]">Administration</p>
             {adminMenuItems.map((item) => {
@@ -139,6 +144,7 @@ export default function Sidebar({
                   key={item.label}
                   to={item.to}
                   onClick={() => setIsSidebarOpen(false)}
+                  style={({ isActive }) => isActive ? { backgroundColor: selectedClient?.theme.primaryColor || '#4f46e5' } : undefined}
                   className={({ isActive }) =>
                     `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                       isActive
