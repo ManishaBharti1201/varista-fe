@@ -168,13 +168,11 @@ jobs:
     needs: [init-notifications, build-and-push]
     runs-on: self-hosted
     steps:
-      - name: SSH and Update VM
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Local Update and Deploy
+        run: |
             cd ~/varista || exit 1
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             echo "INFISICAL_CLIENT_ID=${{ secrets.INFISICAL_CLIENT_ID }}" > .env
