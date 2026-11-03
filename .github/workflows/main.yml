@@ -54,7 +54,7 @@ jobs:
   build-and-push:
     name: Build Image & Push to Docker Hub
     needs: init-notifications
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -166,7 +166,7 @@ jobs:
   deploy:
     name: Deploy to Ubuntu VM
     needs: [init-notifications, build-and-push]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: SSH and Update VM
         uses: appleboy/ssh-action@v1.0.3
@@ -177,6 +177,9 @@ jobs:
           script: |
             cd ~/varista || exit 1
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            echo "INFISICAL_CLIENT_ID=${{ secrets.INFISICAL_CLIENT_ID }}" > .env
+            echo "INFISICAL_CLIENT_SECRET=${{ secrets.INFISICAL_CLIENT_SECRET }}" >> .env
+            echo "INFISICAL_ENVIRONMENT=prod" >> .env
             docker compose pull
             docker compose up -d --force-recreate
 

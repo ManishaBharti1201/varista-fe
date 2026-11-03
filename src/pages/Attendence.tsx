@@ -62,7 +62,7 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
     );
 
     return (
-        <div className={isPopup ? "bg-white" : "min-h-screen bg-[#F8FAFC] p-4 md:p-8"}>
+        <div className={isPopup ? "bg-white" : "app-page p-4 md:p-8"}>
             <div className="max-w-7xl mx-auto">
                 {!isPopup && (
                     <div className="mb-8">

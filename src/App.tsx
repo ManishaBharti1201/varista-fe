@@ -37,13 +37,13 @@ import { useClientStore } from './store/ClientStore';
 
   if (loading) {
   return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F6F8FB]">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#1A233A] flex items-center justify-center shadow-xl">
-            <svg className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2E8BFF] to-[#14B8A6]" />
+          <div className="w-14 h-14 rounded-2xl bg-navy-900 flex items-center justify-center shadow-xl">
+            <svg className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-mint-500" />
           </div>
           <div className="w-48 h-2 bg-slate-200 rounded-full overflow-hidden">
-            <div className="h-full w-1/2 bg-gradient-to-r from-[#2E8BFF] to-[#14B8A6] rounded-full animate-pulse" />
+            <div className="h-full w-1/2 bg-gradient-to-r from-brand-500 to-mint-500 rounded-full animate-pulse" />
           </div>
         </div>
       </div>
@@ -69,10 +69,12 @@ const ScrollToTop = () => {
 
 const App: React.FC = () => {
   const loadTenants = useTenantStore(state => state.loadTenants);
+  const loadClients = useClientStore(state => state.loadClients);
 
   useEffect(() => {
     loadTenants().catch(() => undefined);
-  }, [loadTenants]);
+    loadClients().catch(error => console.error('Failed to restore workspace navigation', error));
+  }, [loadTenants, loadClients]);
 
   return (
     <Router>
@@ -100,4 +102,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

@@ -127,7 +127,7 @@ export default function InvoiceCreate() {
 
   return (
     <div className="max-w-5xl mx-auto pb-20 md:pb-10">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="app-surface overflow-hidden">
         {/* Header */}
         <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-3">

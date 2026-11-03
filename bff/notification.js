@@ -2,24 +2,16 @@ const express = require('express');
 const router = express.Router();
 const { tenantHeaders } = require('./tenant');
 const { authenticate } = require('./auth');
+const { resolveClient, serviceUrl, fetchService } = require('./clients');
 
-const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
-const EXTERNAL_NOTIFICATION_GET_URL = `${EXTERNAL_SERVICE_BASE}/notification/all`;
-const EXTERNAL_NOTIFICATION_READ_URL = `${EXTERNAL_SERVICE_BASE}/notification/{id}/read`;
-const EXTERNAL_NOTIFICATION_READALL_URL = `${EXTERNAL_SERVICE_BASE}/notification/read-all`;
-
-router.get('/notification/all', async (req, res) => {
+router.get('/notification/all', resolveClient, async (req, res) => {
   try {
+    const target = serviceUrl(req, '/notification/all');
     const headers = tenantHeaders(req, {});
-    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
-    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${new Date().toISOString()}] BFF calling external service: [GET] ${EXTERNAL_NOTIFICATION_GET_URL}`);
-    const resp = await fetch(EXTERNAL_NOTIFICATION_GET_URL, {
-      method: 'GET',
-      headers,
-    });
-    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${EXTERNAL_NOTIFICATION_GET_URL}`);
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [GET] ${target}`);
+    const resp = await fetchService(req, target, { method: 'GET', headers });
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${target}`);
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;
@@ -48,15 +40,13 @@ router.get('/notification/all', async (req, res) => {
   }
 });
 
-router.post('/notification/all/:id/read', async (req, res) => {
+router.post('/notification/all/:id/read', resolveClient, async (req, res) => {
   try {
-    const target = EXTERNAL_NOTIFICATION_READ_URL.replace('{id}', req.params.id);
+    const target = serviceUrl(req, `/notification/${encodeURIComponent(req.params.id)}/read`);
     const headers = tenantHeaders(req, {});
-    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
-    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
     console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${target}`);
-    const resp = await fetch(target, { method: 'POST', headers });
+    const resp = await fetchService(req, target, { method: 'POST', headers });
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) {
@@ -70,14 +60,13 @@ router.post('/notification/all/:id/read', async (req, res) => {
   }
 });
 
-router.post('/notification/all/read-all', async (req, res) => {
+router.post('/notification/all/read-all', resolveClient, async (req, res) => {
   try {
+    const target = serviceUrl(req, '/notification/read-all');
     const headers = tenantHeaders(req, {});
-    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
-    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${EXTERNAL_NOTIFICATION_READALL_URL}`);
-    const resp = await fetch(EXTERNAL_NOTIFICATION_READALL_URL, { method: 'POST', headers });
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${target}`);
+    const resp = await fetchService(req, target, { method: 'POST', headers });
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) {

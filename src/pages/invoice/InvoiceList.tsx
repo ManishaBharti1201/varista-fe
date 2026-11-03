@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   Download, Trash2, ChevronUp, ChevronDown, 
   Check, FileUp, Search, Receipt, Calendar, 
-  MoreHorizontal, FileText, Filter
+  MoreHorizontal, FileText, Filter, AlertCircle, X
 } from 'lucide-react';
 import { useCompanyStore } from '../../store/CompanyStore';
 import { endpoints } from '../../config/urls';
@@ -25,6 +25,8 @@ export default function InvoiceList() {
   const { companies } = useCompanyStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof InvoiceRow; direction: 'asc' | 'desc' } | null>(null);
   const [replacingId, setReplacingId] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -85,14 +87,49 @@ export default function InvoiceList() {
   }, []);
 
   const downloadInvoice = async (id: string) => {
+    setDownloadingInvoiceId(id);
+    setDownloadError(null);
     try {
       const response = await apiRequest(endpoints.invoiceDownload(undefined, id), { method: 'GET' });
+      if (!response.ok) {
+        const responseText = await response.text();
+        let message = response.status === 404
+          ? 'The invoice PDF is unavailable. It may have been deleted or not generated.'
+          : `Unable to download invoice (HTTP ${response.status}).`;
+        try {
+          const errorBody = JSON.parse(responseText) as { message?: unknown };
+          if (typeof errorBody.message === 'string') message = errorBody.message;
+        } catch {
+          // Keep the status-based message for non-JSON error responses.
+        }
+        throw new Error(message);
+      }
+
       const blob = await response.blob();
+      const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+      if (!contentType.includes('application/pdf') || await blob.slice(0, 5).text() !== '%PDF-') {
+        throw new Error('The server did not return a valid invoice PDF. Please try again later.');
+      }
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `INV-${id}.pdf`; a.click();
+      a.href = url;
+      a.download = `INV-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      setDownloadError(null);
       showToast('Downloaded successfully');
-    } catch (err) { showToast('Download failed', 'error'); }
+    } catch (err) {
+      const message = err instanceof Error
+        ? err.message
+        : 'Invoice download failed. Please try again.';
+      setDownloadError(message);
+      showToast(message, 'error');
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
   };
 
   const markAsPaid = async (id: string) => {
@@ -129,11 +166,11 @@ export default function InvoiceList() {
 
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-10">
+    <div className="app-page pb-10">
       {/* 1. Header Section */}
-      <div className="bg-[#1A233A] px-6 py-10 md:px-10 md:py-14 text-white rounded-b-[3rem] relative overflow-hidden shadow-2xl">
+      <div className="page-banner md:px-10">
         <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
-        <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="page-banner-content flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight flex items-center gap-3">
               <Receipt className="text-emerald-400" size={32} /> Invoice Ledger
@@ -161,6 +198,28 @@ export default function InvoiceList() {
           </div>
         </div>
       </div>
+
+      {downloadError && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="mx-4 mb-6 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-800 md:mx-8"
+        >
+          <AlertCircle size={20} className="mt-0.5 shrink-0 text-rose-600" />
+          <div className="flex-1">
+            <p className="text-sm font-bold">Invoice PDF unavailable</p>
+            <p className="mt-1 text-sm">{downloadError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDownloadError(null)}
+            aria-label="Dismiss invoice download error"
+            className="rounded-lg p-1 text-rose-500 transition hover:bg-rose-100 hover:text-rose-700"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
       {/* 2. Main Content Container */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-8 relative z-20">
@@ -198,7 +257,7 @@ export default function InvoiceList() {
                    </div>
                 </div>
                 <div className="flex items-center gap-2">
-                   <button onClick={() => downloadInvoice(r.invoiceId)} className="flex-1 py-3 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Download size={14}/> PDF</button>
+                   <button onClick={() => downloadInvoice(r.invoiceId)} disabled={downloadingInvoiceId === r.invoiceId} className="flex-1 py-3 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-emerald-50 hover:text-emerald-600 transition-all disabled:cursor-wait disabled:opacity-60"><Download size={14}/> {downloadingInvoiceId === r.invoiceId ? 'Checking...' : 'PDF'}</button>
                    {r.status !== 'Paid' && (
                      <button onClick={() => markAsPaid(r.invoiceId)} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-100"><Check size={14}/> PAID</button>
                    )}
@@ -254,7 +313,7 @@ export default function InvoiceList() {
                       <td className="px-6 py-5 text-sm font-bold text-slate-500">{r.due}</td>
                       <td className="px-8 py-5">
                         <div className="flex items-center justify-end gap-2">
-                           <button onClick={() => downloadInvoice(r.invoiceId)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 transition-all"><Download size={16}/></button>
+                           <button onClick={() => downloadInvoice(r.invoiceId)} disabled={downloadingInvoiceId === r.invoiceId} aria-label={`Download invoice ${r.invoiceNo}`} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-emerald-50 hover:text-emerald-600 transition-all disabled:cursor-wait disabled:opacity-60"><Download size={16}/></button>
                            {r.status !== 'Paid' && (
                              <button onClick={() => markAsPaid(r.invoiceId)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-emerald-600 hover:text-white transition-all"><Check size={16}/></button>
                            )}

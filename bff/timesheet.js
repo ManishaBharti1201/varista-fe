@@ -3,14 +3,13 @@ const multer = require('multer');
 const FormData = require('form-data');
 const router = express.Router();
 const { tenantHeaders } = require('./tenant');
+const { resolveClient, serviceUrl, fetchService } = require('./clients');
 const upload = multer();
-const { authenticate } = require('./auth');
 
 const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
-const EXTERNAL_TIMESHEET_UPLOAD_URL = `${EXTERNAL_SERVICE_BASE}/timesheet/upload`;
 const EXTERNAL_TIMESHEET_GET_URL = `${EXTERNAL_SERVICE_BASE}/timesheet?employeeId={id}`;
 
-router.post('/timesheet/upload', upload.single('file'), async (req, res) => {
+router.post('/timesheet/upload', resolveClient, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
@@ -21,18 +20,16 @@ router.post('/timesheet/upload', upload.single('file'), async (req, res) => {
     });
     Object.keys(req.body).forEach(key => form.append(key, req.body[key]));
 
-    const headers = tenantHeaders(req, {});
-    if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
-    if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
+    const headers = tenantHeaders(req, form.getHeaders());
     const target = serviceUrl(req, '/timesheet/upload');
 
-    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${EXTERNAL_TIMESHEET_UPLOAD_URL}`);
-    const resp = await fetch(EXTERNAL_TIMESHEET_UPLOAD_URL, {
+    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${target}`);
+    const resp = await fetchService(req, target, {
       method: 'POST',
       headers,
       body: form,
     });
-    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${EXTERNAL_TIMESHEET_UPLOAD_URL}`);
+    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${target}`);
 
     const ct = resp.headers.get('content-type') || '';
     let body = null;

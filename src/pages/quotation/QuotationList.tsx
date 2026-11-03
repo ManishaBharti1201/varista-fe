@@ -102,12 +102,12 @@ export default function QuotationList() {
   useEffect(() => { loadQuotations(); }, [loadQuotations]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-12">
+    <div className="app-page">
       {/* 1. Brand Header */}
-      <div className="bg-[#1A233A] px-6 py-10 md:px-12 md:py-16 text-white rounded-b-[3rem] relative overflow-hidden shadow-2xl">
+      <div className="page-banner">
         <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
         
-        <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="page-banner-content flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight flex items-center gap-3">
               <ReceiptText className="text-blue-400" size={32} /> Quotation Hub

@@ -9,13 +9,13 @@ import {
   LogOut,
   Link as LinkIcon,
   X,
-    Briefcase,
   CreditCard,
   CalendarClock,
   Building2
 } from "lucide-react";
 import { useUserStore } from "../store/UserStore";
 import { useClientStore } from "../store/ClientStore";
+import AppBrandIcon from "./AppBrandIcon";
 
 interface Props {
   isSidebarOpen: boolean;
@@ -24,13 +24,13 @@ interface Props {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", to: "/" },
-  { icon: Building2, label: "Clients", to: "/clients" },
-  { icon: CreditCard, label: "Invoices", to: "/invoices" },
-  { icon: FileText, label: "Quotations", to: "/quotations" },
-  { icon: Users, label: "Employees", to: "/employees" },
-  { icon: CalendarClock, label: "Timesheet", to: "/reports" },
-  { icon: LinkIcon, label: "Quick Links", to: "/quickLinks" },
+  { key: "dashboard", icon: LayoutDashboard, label: "Dashboard", to: "/" },
+  { key: "clients", icon: Building2, label: "Clients", to: "/clients" },
+  { key: "invoices", icon: CreditCard, label: "Invoices", to: "/invoices" },
+  { key: "quotations", icon: FileText, label: "Quotations", to: "/quotations" },
+  { key: "employees", icon: Users, label: "Employees", to: "/employees" },
+  { key: "timesheet", icon: CalendarClock, label: "Timesheet", to: "/reports" },
+  { key: "quicklinks", icon: LinkIcon, label: "Quick Links", to: "/quicklinks" },
 ];
 
 const adminMenuItems = [
@@ -43,22 +43,24 @@ export default function Sidebar({
   handleLogout,
 }: Props) {
   const { user } = useUserStore();
-  const { clients, selectedClientId } = useClientStore();
+  const { clients, selectedClientId, loading: clientsLoading, error: clientsError, loadClients } = useClientStore();
   const selectedClient = clients.find(client => client.id === selectedClientId);
-  const visibleMenuItems = menuItems.filter(item => selectedClient?.menuItems.includes(item.key));
+  const visibleMenuItems = menuItems.filter(item => selectedClient?.menuItems?.includes(item.key));
+  const canShowAdminMenu = user?.role?.toLowerCase().includes('admin')
+    && selectedClient?.menuItems?.includes('users');
   const userName = user ? `${user.firstName} ${user.lastName}` : 'User';
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r border-slate-800/80 bg-[#111A30] shadow-[10px_0_30px_rgba(15,23,42,0.12)] transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r border-slate-800/80 bg-navy-950 shadow-[10px_0_30px_rgba(15,23,42,0.12)] transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
         isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
       }`}
     >
       {/* Header / Logo */}
-      <div className="h-20 flex items-center justify-between px-6 border-b border-white/10 bg-[#0D1428]/40 shrink-0">
+      <div className="h-20 flex items-center justify-between px-6 border-b border-white/10 bg-navy-900/40 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-mint-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
-            <Briefcase className="w-6 h-6 text-white" />
+            <AppBrandIcon className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="font-display font-black text-lg tracking-tight text-white">SYNCRA</h1>
@@ -106,7 +108,29 @@ export default function Sidebar({
         {/* Main Menu */}
         <div className="space-y-1">
           <p className="px-4 mb-2 text-[9px] font-black text-slate-500 uppercase tracking-[0.25em]">Workspace</p>
-          {menuItems.map((item) => {
+          {clientsLoading && !selectedClient && (
+            <p className="px-4 py-3 text-xs font-medium text-slate-400" role="status">
+              Loading workspace navigation…
+            </p>
+          )}
+          {clientsError && !clientsLoading && (
+            <div className="px-4 py-3">
+              <p className="text-xs font-medium text-rose-300">Unable to load workspace navigation.</p>
+              <button
+                type="button"
+                onClick={() => { void loadClients().catch(error => console.error('Failed to load workspace navigation', error)); }}
+                className="mt-2 text-xs font-bold text-brand-300 hover:text-white"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+          {!clientsLoading && !clientsError && !selectedClient && (
+            <p className="px-4 py-3 text-xs font-medium text-amber-200">
+              No client menu is configured for this workspace.
+            </p>
+          )}
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
@@ -114,7 +138,7 @@ export default function Sidebar({
                 to={item.to}
                 onClick={() => setIsSidebarOpen(false)}
                 end={item.to === "/"}
-                style={({ isActive }) => isActive ? { backgroundColor: selectedClient?.theme.primaryColor || '#4f46e5' } : undefined}
+                style={({ isActive }) => isActive ? { backgroundColor: selectedClient?.theme.primaryColor || '#5367F2' } : undefined}
                 className={({ isActive }) =>
                   `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                     isActive
@@ -134,7 +158,7 @@ export default function Sidebar({
         </div>
 
         {/* Admin Section - Only shown if user is admin */}
-        {user?.role?.toLowerCase().includes('admin') && selectedClient?.menuItems.includes('users') && (
+        {canShowAdminMenu && (
           <div className="space-y-1">
             <p className="px-4 mb-2 text-[9px] font-black text-slate-500 uppercase tracking-[0.25em]">Administration</p>
             {adminMenuItems.map((item) => {
@@ -144,7 +168,7 @@ export default function Sidebar({
                   key={item.label}
                   to={item.to}
                   onClick={() => setIsSidebarOpen(false)}
-                  style={({ isActive }) => isActive ? { backgroundColor: selectedClient?.theme.primaryColor || '#4f46e5' } : undefined}
+                  style={({ isActive }) => isActive ? { backgroundColor: selectedClient?.theme.primaryColor || '#5367F2' } : undefined}
                   className={({ isActive }) =>
                     `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                       isActive

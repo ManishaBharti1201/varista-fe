@@ -1,12 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Building2, Check, ChevronDown, FileText, Search, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Building2, Check, ChevronDown, Search, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTenantStore } from '../store/TenantStore';
+import { useClientStore } from '../store/ClientStore';
+import AppBrandIcon from '../components/AppBrandIcon';
 
 export default function TenantSelect() {
   const navigate = useNavigate();
   const { tenants, loading, error, selectTenant } = useTenantStore();
+  const { loadClients, selectClient } = useClientStore();
   const [selected, setSelected] = useState('');
+  const [continuing, setContinuing] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(-1);
@@ -50,6 +55,7 @@ export default function TenantSelect() {
 
   const handleSelect = useCallback((id: string) => {
     setSelected(id);
+    setClientError(null);
     setOpen(false);
   }, []);
 
@@ -83,23 +89,46 @@ export default function TenantSelect() {
     }
   };
 
-  const continueToLogin = () => {
+  const continueToLogin = async () => {
     if (!selected) return;
-    selectTenant(selected);
-    navigate('/login', { replace: true });
+
+    setContinuing(true);
+    setClientError(null);
+    try {
+      await loadClients();
+      const tenant = tenants.find(item => item.id === selected);
+      const clients = useClientStore.getState().clients;
+      const mappedClientId = tenant?.clientId || tenant?.id;
+      const client = clients.find(item => item.id === mappedClientId) ||
+        (!tenant?.clientId && clients.length === 1 ? clients[0] : undefined);
+
+      if (!client) {
+        throw new Error(
+          `No client is mapped to ${tenant?.name || 'this tenant'}. Configure its clientId to match a BFF client.`
+        );
+      }
+
+      selectClient(client.id);
+      selectTenant(selected);
+      navigate('/login', { replace: true });
+    } catch (error) {
+      setClientError(error instanceof Error ? error.message : 'Unable to select a client for this tenant');
+    } finally {
+      setContinuing(false);
+    }
   };
 
   const initials = (name: string) =>
     name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-x-hidden overflow-y-auto bg-[#1A233A] p-4 sm:p-6">
+    <main className="relative flex min-h-screen items-center justify-center overflow-x-hidden overflow-y-auto bg-navy-900 p-4 sm:p-6">
       <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
       <div className="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
       <section className="relative my-2 w-full max-w-md rounded-[1.75rem] border border-white/10 bg-white p-6 shadow-2xl shadow-black/20 sm:my-0 sm:rounded-[2rem] sm:p-10">
         <div className="mb-8 flex items-center gap-3 sm:mb-10">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1A233A] shadow-lg shadow-indigo-900/20">
-            <FileText className="h-6 w-6 text-white" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-navy-900 shadow-lg shadow-indigo-900/20">
+            <AppBrandIcon className="h-6 w-6 text-white" />
           </div>
           <div>
             <p className="text-xl font-black tracking-tight text-slate-900">Syncra</p>
@@ -116,6 +145,7 @@ export default function TenantSelect() {
         </div>
 
         {error && <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-600">{error}</p>}
+        {clientError && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-600">{clientError}</p>}
 
         {/* Custom dropdown */}
         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400" id="tenant-label">Tenant</label>
@@ -228,8 +258,8 @@ export default function TenantSelect() {
           )}
         </div>
 
-        <button onClick={continueToLogin} disabled={!selected || loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-4 font-black text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
-          Continue to login <ArrowRight className="h-5 w-5" />
+        <button onClick={continueToLogin} disabled={!selected || loading || continuing} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-4 font-black text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+          {continuing ? 'Loading workspace...' : 'Continue to login'} <ArrowRight className="h-5 w-5" />
         </button>
         <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
           <ShieldCheck className="h-4 w-4 text-emerald-500" /> Secure tenant access

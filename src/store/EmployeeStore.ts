@@ -22,6 +22,17 @@ export interface Employee {
   uan: string;
   category: string;
   weeklyOff: string[];
+  basicSalary?: number | string | null;
+  hra?: number | string | null;
+  interimBonus?: number | string | null;
+  washingAllowance?: number | string | null;
+  specialAllowance?: number | string | null;
+  otherAllowance?: number | string | null;
+  lwfDeduction?: number | string | null;
+  advanceRecovery?: number | string | null;
+  otherDeductions?: number | string | null;
+  employerLwfContribution?: number | string | null;
+  dateOfPayment?: string | null;
 }
 
 interface EmployeeState {

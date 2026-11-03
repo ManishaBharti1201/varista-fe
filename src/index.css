@@ -1,35 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
-
 :root {
-  --ink: #101828;
-  --ink-soft: #344054;
-  --paper: #f4f7f8;
-  --line: #e4e9ec;
+  color-scheme: light;
+  --ink: #17213a;
+  --ink-soft: #475569;
+  --paper: #f8fafc;
+  --surface: #ffffff;
+  --line: #e2e8f0;
+  --brand: #5367f2;
+  --brand-dark: #4354d8;
   --mint: #16b8a6;
   --mint-dark: #087f78;
   --coral: #f06b56;
   --gold: #eabf4b;
+  --font-body: 'DM Sans', 'Segoe UI', sans-serif;
+  --font-display: 'Manrope', 'DM Sans', sans-serif;
 }
 
-body {
-  margin: 0;
-  font-family: 'DM Sans', 'Segoe UI', sans-serif;
-  background: var(--paper);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@layer base {
+  html {
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--paper);
+  }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Manrope', 'DM Sans', sans-serif;
-}
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-button, input, select, textarea {
-  font: inherit;
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+
+  button, input, select, textarea {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
 }
 
 code {
@@ -41,11 +60,38 @@ code {
   width: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #c8d5d8;
+  background: #cbd5e1;
   border-radius: 10px;
 }
 
 ::selection {
-  background: rgba(22, 184, 166, 0.2);
+  background: rgba(83, 103, 242, 0.2);
   color: var(--ink);
+}
+
+@layer components {
+  .app-page {
+    @apply min-h-full bg-slate-50 pb-12 text-slate-900;
+  }
+
+  .page-banner {
+    @apply relative mb-8 overflow-hidden rounded-b-3xl bg-navy-900 px-6 py-10 text-white shadow-xl md:px-12 md:py-14;
+  }
+
+  .page-banner-content {
+    @apply relative z-10 mx-auto max-w-7xl;
+  }
+
+  .page-banner-title {
+    @apply text-3xl font-extrabold tracking-tight text-white md:text-4xl;
+  }
+
+  .page-banner-description {
+    @apply mt-1 text-sm font-medium text-slate-300;
+  }
+
+  .app-surface {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+  }
+
 }

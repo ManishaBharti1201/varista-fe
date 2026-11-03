@@ -8,11 +8,11 @@ export default function HRMSSystemSettings() {
   const tabs = ["Create Quotation", "Manage Quotations"];
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+    <div className="flex min-h-full flex-col bg-slate-50">
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col">
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="flex-1 px-4 py-6 sm:px-8">
           {/* Page Title */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-slate-800 mb-2">
@@ -32,13 +32,13 @@ export default function HRMSSystemSettings() {
                   onClick={() => setActiveTab(tab)}
                   className={`px-6 py-3 text-sm font-medium whitespace-nowrap transition-all relative ${
                     activeTab === tab
-                      ? "text-blue-600"
+                      ? "text-indigo-600"
                       : "text-slate-600 hover:text-slate-800"
                   }`}
                 >
                   {tab}
                   {activeTab === tab && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></div>
                   )}
                 </button>
               ))}
@@ -52,11 +52,11 @@ export default function HRMSSystemSettings() {
           )}
 
           {/* Info Card */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
             <div className="flex gap-3">
               <div className="flex-shrink-0">
                 <svg
-                  className="w-5 h-5 text-blue-600"
+                  className="w-5 h-5 text-indigo-600"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -68,7 +68,7 @@ export default function HRMSSystemSettings() {
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-sm text-blue-900">
+                <p className="text-sm text-indigo-900">
                   <span className="font-semibold">Note:</span> Ensure all
                   quotation details are accurate before sending to clients.
                 </p>

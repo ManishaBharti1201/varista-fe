@@ -96,13 +96,13 @@ export default function HRMSSystemSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-20">
+    <div className="app-page pb-20">
       {/* 1. Header Section */}
-      <div className="bg-[#1A233A] px-6 py-10 md:px-12 md:py-16 text-white relative overflow-hidden">
+      <div className="page-banner">
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="max-w-4xl mx-auto relative z-10">
-          <h1 className="text-3xl md:text-4xl font-black mb-2 tracking-tight text-white">Account Settings</h1>
-          <p className="text-slate-400 font-medium">Manage your digital identity and preferences</p>
+        <div className="page-banner-content max-w-4xl">
+          <h1 className="page-banner-title mb-2">Account Settings</h1>
+          <p className="page-banner-description">Manage your digital identity and preferences</p>
         </div>
       </div>
 

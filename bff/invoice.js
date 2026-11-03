@@ -100,10 +100,25 @@ router.get('/invoice/:id/download', async (req, res) => {
 
     if (!resp.ok) {
       const errorBody = await resp.text();
-      return res.status(resp.status).json({ message: 'External service error', details: errorBody });
+      let serviceMessage = '';
+      try {
+        const parsed = JSON.parse(errorBody);
+        serviceMessage = parsed.message || parsed.error || '';
+      } catch (_error) {
+        serviceMessage = '';
+      }
+      return res.status(resp.status).json({
+        message: serviceMessage || (resp.status === 404
+          ? 'The invoice PDF is unavailable. It may have been deleted or not generated.'
+          : 'Unable to download invoice.'),
+      });
     }
 
     const body = await resp.buffer();
+    if (body.length < 5 || body.subarray(0, 5).toString('ascii') !== '%PDF-') {
+      console.error(`[${new Date().toISOString()}] Invoice service returned a non-PDF response for ${req.params.id}`);
+      return res.status(502).json({ message: 'The invoice service did not return a valid PDF.' });
+    }
     res.setHeader('Content-Disposition', `attachment; filename="${req.params.id}.pdf"`);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', body.length);

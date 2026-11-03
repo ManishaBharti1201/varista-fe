@@ -5,6 +5,7 @@ require('dotenv').config();
 
 // Import modular routes
 const { authRoutes, authenticate } = require('./auth');
+const { publicClients } = require('./clients');
 const holidayRoutes = require('./holiday');
 const timesheetRoutes = require('./timesheet');
 const blobsRoutes = require('./blobs');
@@ -13,6 +14,8 @@ const quotationRoutes = require('./quotation');
 const employeeRoutes = require('./employee');
 const companyRoutes = require('./company');
 const notificationRoutes = require('./notification');
+const supportRoutes = require('./support');
+const { loadInfisicalSecretsToEnv } = require('./infisicalLoader');
 
 const app = express();
 app.use(cors());
@@ -30,6 +33,7 @@ app.use('/api', authenticate, quotationRoutes);
 app.use('/api', authenticate, employeeRoutes);
 app.use('/api', authenticate, companyRoutes);
 app.use('/api', authenticate, notificationRoutes);
+app.use('/api', authenticate, supportRoutes);
 
 // IMPORTANT: Catch-all for /api routes to prevent them from returning index.html
 // This ensures that if a frontend API call is misspelled, it gets a 404 JSON error.
@@ -55,4 +59,7 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`[${new Date().toISOString()}] BFF listening on http://localhost:${PORT}`));
+
+loadInfisicalSecretsToEnv().then(() => {
+  app.listen(PORT, () => console.log(`[${new Date().toISOString()}] BFF listening on http://localhost:${PORT}`));
+});

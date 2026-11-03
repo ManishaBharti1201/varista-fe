@@ -5,7 +5,6 @@ const router = express.Router();
 const EXTERNAL_SERVICE_BASE = process.env.EXTERNAL_SERVICE_BASE_URL || 'https://service.coresmith.duckdns.org';
 const EXTERNAL_AUTH_URL = `${EXTERNAL_SERVICE_BASE}/user/login`;
 const EXTERNAL_VERIFY_OTP_URL = `${EXTERNAL_SERVICE_BASE}/user/verify-otp`;
-const EXTERNAL_RESET_PASSWORD_URL = `${EXTERNAL_SERVICE_BASE}/user/resetPassword/{email}`;
 const EXTERNAL_USER_UPDATE_URL = `${EXTERNAL_SERVICE_BASE}/user/update`;
 const EXTERNAL_USER_SESSION_URL = `${EXTERNAL_SERVICE_BASE}/user/me`;
 const { tenantHeaders } = require('./tenant');
@@ -144,27 +143,36 @@ router.put('/user/update', authenticate, async (req, res) => {
   }
 });
 
-router.post('/resetPassword/:email', async (req, res) => {
-  const email = req.params.email;
+router.post('/password-reset/request', async (req, res) => {
   try {
-    const target = serviceUrl(req, `/user/resetPassword/${encodeURIComponent(email)}`);
-
-    console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${target}`);
-    const resp = await fetch(target, {
+    const resp = await fetchService(req, serviceUrl(req, '/user/password-reset/request'), {
       method: 'POST',
       headers: tenantHeaders(req, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ email: req.body?.email }),
     });
-    console.log(`[${new Date().toISOString()}] External service response: [${resp.status}] ${target}`);
-
-    const body = await resp.json().catch(() => null);
-
-    if (!resp.ok) {
-      return res.status(resp.status).json({ message: body?.message || 'Reset password failed', details: body });
-    }
-
-    return res.json(body);
+    const body = await resp.json().catch(() => ({}));
+    return res.status(resp.status).json(body);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] BFF /api/resetPassword error`, err);
+    console.error(`[${new Date().toISOString()}] BFF /api/password-reset/request error`, err);
+    return res.status(500).json({ message: 'BFF internal error', error: err.message });
+  }
+});
+
+router.post('/password-reset/confirm', async (req, res) => {
+  try {
+    const resp = await fetchService(req, serviceUrl(req, '/user/password-reset/confirm'), {
+      method: 'POST',
+      headers: tenantHeaders(req, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        email: req.body?.email,
+        verificationCode: req.body?.verificationCode,
+        newPassword: req.body?.newPassword,
+      }),
+    });
+    const body = await resp.json().catch(() => ({}));
+    return res.status(resp.status).json(body);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] BFF /api/password-reset/confirm error`, err);
     return res.status(500).json({ message: 'BFF internal error', error: err.message });
   }
 });

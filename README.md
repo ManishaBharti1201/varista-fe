@@ -12,10 +12,20 @@ service.
 ## Multi-client support
 
 The frontend loads its client catalog from `GET /api/clients`. Users select a
-client before entering credentials. The selected client's theme and menu
-configuration control the login branding and available application sections.
-Authenticated frontend requests include `X-Client-Id`; login submits `clientId`
-in its JSON body.
+tenant before entering credentials, and the tenant is mapped to a client. Set
+the tenant's optional `clientId` to its BFF client ID; if omitted, matching
+tenant/client IDs are used, or the only configured client is selected when
+there is exactly one. With multiple clients, configure an explicit mapping
+when the IDs differ. The selected client's theme and menu configuration control
+the login branding and available application sections. Authenticated frontend
+requests include `X-Client-Id`; login submits `clientId` in its JSON body.
+
+Configure tenants with the frontend `REACT_APP_TENANTS` variable as a JSON
+array, for example:
+
+```json
+[{"id":"101","name":"Leadac","clientId":"northwind"}]
+```
 
 The BFF owns the mapping from client IDs to backend service URLs. Configure
 clients using the `CLIENT_CATALOG_JSON` environment variable in the BFF
@@ -62,6 +72,9 @@ the local BFF so `/api` calls use the local client catalog and proxy:
 $env:REACT_APP_BFF_URL = "http://localhost:4000"
 npm start
 ```
+
+The development server also proxies `/api` requests to `http://localhost:4000`
+by default, so the environment variable can be omitted when using the local BFF.
 
 Open [http://localhost:3000](http://localhost:3000). The BFF listens on
 `http://localhost:4000` by default and reads its environment from `bff/.env`.

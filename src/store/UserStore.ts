@@ -27,6 +27,8 @@ interface UserState {
   user: User | null;
   loading: boolean;
   login: (credentials: { username: string; password: string; clientId: string }) => Promise<any>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  confirmPasswordReset: (details: { email: string; verificationCode: string; newPassword: string }) => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   updateUserVisuals: () => void;
   logout: () => void; // Added logout to interface
@@ -111,6 +113,40 @@ export const useUserStore = create<UserState>()(
           set({ loading: false, user: null });
           throw err;
         }
+      },
+
+      requestPasswordReset: async (email: string) => {
+        const tenantId = useTenantStore.getState().selectedTenantId;
+        const clientId = localStorage.getItem('selected-client-id');
+        if (!tenantId || !clientId) throw new Error('Select a workspace before resetting your password');
+        const response = await fetch(endpoints.passwordResetRequest(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-Client-Id': clientId,
+          },
+          body: JSON.stringify({ email }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Unable to request a password reset');
+      },
+
+      confirmPasswordReset: async (details: { email: string; verificationCode: string; newPassword: string }) => {
+        const tenantId = useTenantStore.getState().selectedTenantId;
+        const clientId = localStorage.getItem('selected-client-id');
+        if (!tenantId || !clientId) throw new Error('Select a workspace before resetting your password');
+        const response = await fetch(endpoints.passwordResetConfirm(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-Client-Id': clientId,
+          },
+          body: JSON.stringify(details),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Unable to reset your password');
       },
 
       updateUserVisuals: () => {

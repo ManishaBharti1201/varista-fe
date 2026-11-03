@@ -9,7 +9,8 @@ export const endpoints = {
   clients: (base: string = bffBase) => `${base || ''}/api/clients`,
   login: (base: string = bffBase) => `${base || ''}/api/login`,
   updateUser: (base: string = bffBase) => `${base || ''}/api/user/update`,
-  resetPassword: (base: string = bffBase, email: string) => `${base || ''}/api/resetPassword/${encodeURIComponent(email)}`, 
+  passwordResetRequest: (base: string = bffBase) => `${base || ''}/api/password-reset/request`,
+  passwordResetConfirm: (base: string = bffBase) => `${base || ''}/api/password-reset/confirm`,
   invoices: (base: string = bffBase) => `${base || ''}/api/invoice`,
   quotationCreate: (base: string = bffBase) => `${base || ''}/api/quotation/create`,
   quotationList: (base: string = bffBase) => `${base || ''}/api/quotation/all`,
@@ -37,13 +38,8 @@ export const endpoints = {
   blobDownload: (base: string = bffBase, id: string) => `${base || ''}/api/blob/${id}/download`,
   blobDelete: (base: string = bffBase, id: string) => `${base || ''}/api/blob/${id}`,
   notificationList: (base: string = bffBase) => `${base || ''}/api/notification/all`,
+  supportTicket: (base: string = bffBase) => `${base || ''}/api/support/tickets`,
   health: (base: string = bffBase) => `${base || ''}/api/health`,
-  holidayList: (base: string = bffBase) => `${base || ''}/api/holiday/all`,
-  holidayCreate: (base: string = bffBase) => `${base || ''}/api/holiday/create`,
-  holidayDelete: (base: string = bffBase) => `${base || ''}/api/holiday/delete`,
-  blobs: (base: string = bffBase) => `${base || ''}/api/blobs`,
-  blobDownload: (base: string = bffBase, id: string) => `${base || ''}/api/blob/${id}/download`,
-  blobDelete: (base: string = bffBase, id: string) => `${base || ''}/api/blob/${id}`,
 };
 
 export default {

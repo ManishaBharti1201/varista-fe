@@ -42,9 +42,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-full overflow-x-hidden bg-[#F8FAFC]">
+    <div className="min-h-full overflow-x-hidden bg-slate-50">
       {/* 1. Header - Optimized Padding for Mobile */}
-      <div className="relative overflow-hidden bg-[#1A233A] px-6 py-12 md:px-10 md:py-20 rounded-b-[2.5rem] md:rounded-b-[3.5rem] shadow-2xl">
+      <div className="relative overflow-hidden bg-navy-900 px-6 py-12 md:px-10 md:py-20 rounded-b-3xl shadow-xl">
         <div className="absolute top-[-10%] right-[-5%] w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
         
         <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -121,7 +121,7 @@ export default function Dashboard() {
             </div>
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="p-3 md:px-6 md:py-4 bg-[#1A233A] text-white rounded-xl md:rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
+              className="p-3 md:px-6 md:py-4 bg-navy-900 text-white rounded-xl md:rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2"
             >
               <Plus size={16} /> <span className="hidden md:inline">Add Milestone</span>
             </button>
@@ -149,7 +149,7 @@ export default function Dashboard() {
 
       {/* 5. Modal - Bottom Sheet Style for Mobile */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-[#1A233A]/60 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-navy-900/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white rounded-t-[2.5rem] md:rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-1/2 duration-500">
             <div className="px-8 py-6 md:p-10 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">New Entry</h3>
@@ -179,7 +179,7 @@ export default function Dashboard() {
                   />
                 </div>
               </div>
-              <button type="submit" className="w-full py-5 md:py-6 bg-[#1A233A] text-white rounded-2xl md:rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-600 transition-all mb-4 md:mb-0">
+              <button type="submit" className="w-full py-5 md:py-6 bg-navy-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-600 transition-all mb-4 md:mb-0">
                 Authorize Event
               </button>
             </form>

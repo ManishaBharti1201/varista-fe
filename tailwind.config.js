@@ -7,8 +7,34 @@ module.exports = {
     extend: {
       colors: {
         navy: {
-          900: '#17213A',
-          950: '#0D1428',
+          900: '#1A233A',
+          950: '#111A30',
+        },
+        indigo: {
+          50: '#EEF2FF',
+          100: '#DDE5FF',
+          200: '#C6D2FF',
+          300: '#A9BFFF',
+          400: '#8298FF',
+          500: '#5367F2',
+          600: '#4354D8',
+          700: '#3544B5',
+          800: '#29358F',
+          900: '#222D69',
+          950: '#17213A',
+        },
+        blue: {
+          50: '#EEF2FF',
+          100: '#DDE5FF',
+          200: '#C6D2FF',
+          300: '#A9BFFF',
+          400: '#8298FF',
+          500: '#5367F2',
+          600: '#4354D8',
+          700: '#3544B5',
+          800: '#29358F',
+          900: '#222D69',
+          950: '#17213A',
         },
         brand: {
           50: '#EEF2FF',
@@ -29,6 +55,7 @@ module.exports = {
         },
       },
       fontFamily: {
+        sans: ['DM Sans', 'Segoe UI', 'sans-serif'],
         display: ['Manrope', 'DM Sans', 'sans-serif'],
       },
     },

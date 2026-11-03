@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { endpoints } from '../config/urls';
+import { useTenantStore } from './TenantStore';
 
 export interface ClientConfig {
   id: string;
@@ -42,8 +43,14 @@ export const useClientStore = create<ClientState>((set) => ({
       }
 
       set((state) => {
-        const selectionExists = clients.some(client => client.id === state.selectedClientId);
-        const selectedClientId = selectionExists ? state.selectedClientId : '';
+        const selectedTenantId = useTenantStore.getState().selectedTenantId;
+        const selectedTenant = useTenantStore.getState().tenants.find(tenant => tenant.id === selectedTenantId);
+        const mappedClientId = selectedTenant?.clientId || selectedTenant?.id;
+        const savedSelectionExists = clients.some(client => client.id === state.selectedClientId);
+        const mappedClient = clients.find(client => client.id === mappedClientId);
+        const selectedClientId = savedSelectionExists
+          ? state.selectedClientId
+          : mappedClient?.id || (!selectedTenant?.clientId && clients.length === 1 ? clients[0].id : '');
         if (selectedClientId) localStorage.setItem(CLIENT_STORAGE_KEY, selectedClientId);
         else localStorage.removeItem(CLIENT_STORAGE_KEY);
         return { clients, selectedClientId, loading: false, error: null };

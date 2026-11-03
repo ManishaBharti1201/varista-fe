@@ -1,6 +1,7 @@
 export interface Tenant {
   id: string;
   name: string;
+  clientId?: string;
 }
 
 interface RuntimeConfig {
@@ -21,7 +22,8 @@ function parseTenants(value?: string): Tenant[] {
     const validTenants = tenants.filter(
       (tenant): tenant is Tenant =>
         tenant && typeof tenant.id === 'string' && /^1\d{2}$/.test(tenant.id.trim()) &&
-        typeof tenant.name === 'string' && tenant.name.trim()
+        typeof tenant.name === 'string' && tenant.name.trim() &&
+        (tenant.clientId === undefined || (typeof tenant.clientId === 'string' && tenant.clientId.trim()))
     );
 
     return validTenants.length ? validTenants : fallbackTenants;
@@ -30,5 +32,5 @@ function parseTenants(value?: string): Tenant[] {
   }
 }
 
-// Configure this as a JSON array with sequential 1xx IDs, e.g. [{"id":"101","name":"Leadac"}].
+// Configure this as a JSON array with sequential 1xx IDs and optional BFF clientId mappings.
 export const configuredTenants = parseTenants(tenantsConfig);

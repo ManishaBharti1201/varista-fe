@@ -16,6 +16,7 @@ export default function AnalyticsReports() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [holidayType, setHolidayType] = useState('public');
   const [uploading, setUploading] = useState(false);
+  const [paymentDate, setPaymentDate] = useState('');
   const [holidayName, setHolidayName] = useState('');
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
 
@@ -149,10 +150,16 @@ export default function AnalyticsReports() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!paymentDate) {
+      setToast({ message: 'Select the payroll payment date before uploading', type: 'error' });
+      e.target.value = '';
+      return;
+    }
 
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('paymentDate', paymentDate);
 
     try {
       const response = await apiRequest(endpoints.timesheetUpload(), {
@@ -207,14 +214,14 @@ export default function AnalyticsReports() {
   const days = getDaysInMonth(currentDate);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-12">
+    <div className="app-page">
       {/* 1. Brand Header */}
-      <div className="bg-[#1A233A] px-6 py-10 md:px-12 md:py-16 text-white rounded-b-[3rem] relative overflow-hidden shadow-2xl mb-8">
+      <div className="page-banner">
         <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
-        <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="page-banner-content flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight">Analytics & Reports</h1>
-            <p className="text-slate-400 font-medium mt-1">Holidays, Muster Records & Payroll Insights</p>
+            <h1 className="page-banner-title">Analytics & Reports</h1>
+            <p className="page-banner-description">Holidays, Muster Records & Payroll Insights</p>
           </div>
           <div className="flex gap-3 w-full md:w-auto">
             <button
@@ -463,6 +470,19 @@ export default function AnalyticsReports() {
             </div>
             
             <div className="space-y-6">
+              <div>
+                <label htmlFor="payroll-payment-date" className="block text-xs font-bold text-slate-500 mb-2">
+                  Payroll payment date
+                </label>
+                <input
+                  id="payroll-payment-date"
+                  type="date"
+                  required
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold"
+                />
+              </div>
               <div className="border-4 border-dashed border-slate-50 rounded-[2rem] p-10 flex flex-col items-center justify-center text-center group hover:border-indigo-100 transition-colors">
                 <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl mb-4 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Upload size={32}/>

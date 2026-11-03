@@ -7,6 +7,28 @@ import { Employee, useEmployeeStore } from '../store/EmployeeStore';
 import { Toast } from '../components/Toast';
 import AttendanceManagement from './Attendence';
 
+const payrollProfileFields: (keyof Employee)[] = [
+    'basicSalary',
+    'hra',
+    'interimBonus',
+    'washingAllowance',
+    'specialAllowance',
+    'otherAllowance',
+    'lwfDeduction',
+    'advanceRecovery',
+    'otherDeductions',
+    'employerLwfContribution',
+    'dateOfPayment',
+];
+
+const normalizePayrollCategory = (category: string | null | undefined) => {
+    const normalized = category?.toUpperCase().replace(/[^A-Z]/g, '');
+    if (normalized === 'UNSKILLED') return 'Unskilled';
+    if (normalized === 'SEMISKILLED') return 'Semiskilled';
+    if (normalized === 'SKILLED') return 'Skilled';
+    return category || '';
+};
+
 export default function EmployeeMgmt() {
     const { employees, fetchEmployees, upsertEmployee } = useEmployeeStore();
 
@@ -27,7 +49,7 @@ export default function EmployeeMgmt() {
     const [formData, setFormData] = useState<Partial<Employee>>({
         id: '', esic: '', eip: '', dob: '', firstName: '', lastName: '',
         fatherName: '', gender: '', email: '', phone: '', adhaar: '',
-        role: '', joiningDate: '', uan: '',category: '', weeklyOff: [],
+        role: '', joiningDate: '', uan: '', category: '', weeklyOff: [],
     });
 
     useEffect(() => {
@@ -63,7 +85,11 @@ export default function EmployeeMgmt() {
     // --- Event Handlers ---
     const handleEditClick = (employee: Employee) => {
         setSelectedEmployee(employee);
-        setFormData({ ...employee, phone: formatPhone(employee.phone || '') });
+        setFormData({
+            ...employee,
+            category: normalizePayrollCategory(employee.category),
+            phone: formatPhone(employee.phone || ''),
+        });
         setShowNewEmployeeForm(true);
     };
 
@@ -100,7 +126,9 @@ export default function EmployeeMgmt() {
         }
         setSubmitting(true);
         try {
-            await upsertEmployee(formData as Employee);
+            const employeeData = { ...formData };
+            payrollProfileFields.forEach(field => delete employeeData[field]);
+            await upsertEmployee(employeeData as Employee);
             showToast(selectedEmployee ? 'Staff updated successfully' : 'Staff registered successfully');
             handleCancel();
         } catch (err) {
@@ -116,7 +144,7 @@ export default function EmployeeMgmt() {
         setFormData({
             id: '', esic: '', eip: '', dob: '', firstName: '', lastName: '',
             fatherName: '', gender: '', email: '', phone: '', adhaar: '',
-            role: '', joiningDate: '', uan: '', weeklyOff: [],
+            role: '', joiningDate: '', uan: '', category: '', weeklyOff: [],
         });
     };
 
@@ -160,13 +188,13 @@ export default function EmployeeMgmt() {
     const labelClass = "block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1";
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] pb-12">
-            <div className="bg-[#1A233A] px-6 py-10 md:px-12 md:py-16 text-white rounded-b-[3rem] relative overflow-hidden shadow-2xl mb-8">
+        <div className="app-page">
+            <div className="page-banner">
                 <div className="absolute top-[-10%] right-[-5%] w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
-                <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="page-banner-content flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div>
-                        <h1 className="text-3xl md:text-4xl font-black tracking-tight">Staff Management</h1>
-                        <p className="text-slate-400 font-medium mt-1">Directory, Identity & Attendance Control</p>
+                        <h1 className="page-banner-title">Staff Management</h1>
+                        <p className="page-banner-description">Directory, Identity & Attendance Control</p>
                     </div>
                     <button
                         onClick={() => setShowNewEmployeeForm(true)}
@@ -377,7 +405,12 @@ export default function EmployeeMgmt() {
                                     </div>
                                     <div >
                                         <label className={labelClass}>Category</label>
-                                        <input type="text" name="esic" value={formData.category} onChange={handleInputChange} placeholder="Category" className={inputClass} />
+                                        <select name="category" value={formData.category || ''} onChange={handleInputChange} className={inputClass}>
+                                            <option value="">Select category</option>
+                                            <option value="Unskilled">Unskilled</option>
+                                            <option value="Semiskilled">Semiskilled</option>
+                                            <option value="Skilled">Skilled</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>

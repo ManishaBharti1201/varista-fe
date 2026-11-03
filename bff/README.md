@@ -43,6 +43,8 @@ service URL). Replace this placeholder before enabling production tenants.
   menu configuration.
 - `POST /api/login` requires `clientId` in its JSON body.
 - Authenticated API requests require `X-Client-Id`.
+- `POST /api/support/tickets` forwards authenticated support requests to the
+  selected service; the service sends them to its configured support email.
 - The BFF resolves that ID against its configured catalog, routes to the
   matching `serviceBaseUrl`, and forwards `X-Client-Id` to the service.
 - Never accept a service URL from a browser request. Configure service URLs

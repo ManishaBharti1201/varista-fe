@@ -16,12 +16,14 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
   }
 
   const token = localStorage.getItem('token');
+  const clientId = localStorage.getItem('selected-client-id');
   const tenantId = getSelectedTenantId();
   if (!tenantId) throw new Error('Tenant is required');
 
   const headers: Record<string, string> = {
     ...(token ? { Authorization: 'Bearer ' + token } : {}),
     'X-Tenant-ID': tenantId,
+    ...(clientId ? { 'X-Client-Id': clientId } : {}),
     ...((options.headers as Record<string, string>) || {}),
   };
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
