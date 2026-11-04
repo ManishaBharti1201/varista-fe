@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     environment:
       - PORT=4000
-      - EXTERNAL_SERVICE_BASE_URL=https://service.coresmith.duckdns.org
+      - EXTERNAL_SERVICE_BASE_URL=http://varista-backend:8080
       - FRONTEND_ORIGINS=https://bff.coresmith.duckdns.org
       - INFISICAL_SITE_URL=https://app.infisical.com
       - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
