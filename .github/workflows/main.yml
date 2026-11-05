@@ -53,11 +53,20 @@ jobs:
 
   build-and-push:
     name: Build Image & Push to Docker Hub
-    needs: init-notifications
+    needs: [init-notifications, build-android]
     runs-on: self-hosted
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Download APK for frontend image
+        uses: actions/download-artifact@v4
+        with:
+          name: varista-debug-apk
+          path: public/downloads
+
+      - name: Name APK for public download
+        run: mv public/downloads/app-debug.apk public/downloads/varista.apk
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -121,7 +130,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -191,8 +200,64 @@ jobs:
             docker compose pull
             docker compose up -d --force-recreate
 
-      - name: Final Pipeline Status
-        if: always()
+  verify-endpoints:
+    name: Verify deployed endpoints
+    needs: [deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.check.outputs.frontend }}
+      health: ${{ steps.check.outputs.health }}
+      clients: ${{ steps.check.outputs.clients }}
+      apk: ${{ steps.check.outputs.apk }}
+    steps:
+      - name: Check public endpoints
+        id: check
+        shell: bash
+        run: |
+          set +e
+          check_url() {
+            url=$1
+            response_file=$2
+            max_time=$3
+            status=000
+            for attempt in 1 2 3 4; do
+              status=$(curl -sS -o "$response_file" -w '%{http_code}' --max-time "$max_time" "$url")
+              [ "$status" = "200" ] && break
+              [ "$attempt" = "4" ] || sleep 5
+            done
+            printf '%s' "${status:-000}"
+          }
+
+          frontend_status=$(check_url https://varista.coresmith.duckdns.org/ /dev/null 20)
+          health_status=$(check_url https://bff.coresmith.duckdns.org/api/health /dev/null 20)
+          clients_status=$(check_url https://bff.coresmith.duckdns.org/api/clients "$RUNNER_TEMP/clients.json" 20)
+          apk_status=$(check_url https://varista.coresmith.duckdns.org/downloads/varista.apk /dev/null 60)
+
+          if [ "$clients_status" = "200" ] && ! python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(data,list) and len(data)>0 else 1)' "$RUNNER_TEMP/clients.json"; then
+            clients_status="invalid catalog"
+          fi
+
+          echo "frontend=$frontend_status" >> "$GITHUB_OUTPUT"
+          echo "health=$health_status" >> "$GITHUB_OUTPUT"
+          echo "clients=$clients_status" >> "$GITHUB_OUTPUT"
+          echo "apk=$apk_status" >> "$GITHUB_OUTPUT"
+
+          printf 'Frontend: %s\nBFF health: %s\nBFF clients: %s\nAPK download: %s\n' \
+            "$frontend_status" "$health_status" "$clients_status" "$apk_status"
+
+          [ "$frontend_status" = "200" ] &&
+            [ "$health_status" = "200" ] &&
+            [ "$clients_status" = "200" ] &&
+            [ "$apk_status" = "200" ]
+
+  pipeline-summary:
+    name: Post pipeline summary to Slack
+    needs: [init-notifications, build-android, build-and-push, deploy, verify-endpoints]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post stages and endpoint results
         uses: slackapi/slack-github-action@v1.27.0
         with:
           channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
@@ -206,8 +271,24 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "🏁 *Pipeline Finished: ${{ job.status == 'success' && 'SUCCESS 🎉' || 'FAILURE 🚨' }}*\n*Host:* `${{ secrets.VM_HOST }}`"
+                    "text": "🏁 *Pipeline summary*\n• Android APK build: `${{ needs.build-android.result }}`\n• Docker image build/push: `${{ needs.build-and-push.result }}`\n• VM deployment: `${{ needs.deploy.result }}`\n• Endpoint checks: `${{ needs.verify-endpoints.result }}`"
                   }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployed endpoints*\n• Frontend: <https://varista.coresmith.duckdns.org/|https://varista.coresmith.duckdns.org/> — `${{ needs.verify-endpoints.outputs.frontend }}`\n• BFF health: <https://bff.coresmith.duckdns.org/api/health|/api/health> — `${{ needs.verify-endpoints.outputs.health }}`\n• BFF clients: <https://bff.coresmith.duckdns.org/api/clients|/api/clients> — `${{ needs.verify-endpoints.outputs.clients }}`\n• Latest APK: <https://varista.coresmith.duckdns.org/downloads/varista.apk|Download APK> — `${{ needs.verify-endpoints.outputs.apk }}`"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>"
+                    }
+                  ]
                 }
               ]
             }

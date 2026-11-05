@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Building2, Check, ChevronDown, Search, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Building2, Check, ChevronDown, Download, Search, ShieldCheck, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTenantStore } from '../store/TenantStore';
 import { useClientStore } from '../store/ClientStore';
@@ -261,6 +261,15 @@ export default function TenantSelect() {
         <button onClick={continueToLogin} disabled={!selected || loading || continuing} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-4 font-black text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
           {continuing ? 'Loading workspace...' : 'Continue to login'} <ArrowRight className="h-5 w-5" />
         </button>
+        <a
+          href="/downloads/varista.apk"
+          download="varista.apk"
+          className="mt-5 flex items-center justify-center gap-2 text-sm font-bold text-indigo-600 transition hover:text-indigo-700"
+        >
+          <Smartphone className="h-4 w-4" aria-hidden="true" />
+          <Download className="h-4 w-4" aria-hidden="true" />
+          Download Android app (APK)
+        </a>
         <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
           <ShieldCheck className="h-4 w-4 text-emerald-500" /> Secure tenant access
         </div>

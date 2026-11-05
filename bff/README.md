@@ -39,6 +39,7 @@ service URL). Replace this placeholder before enabling production tenants.
 
 ## Request behavior
 
+- `GET /api/health` returns the BFF health status.
 - `GET /api/clients` returns public client names, optional domains, themes, and
   menu configuration.
 - `POST /api/login` requires `clientId` in its JSON body.

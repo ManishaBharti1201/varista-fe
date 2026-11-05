@@ -7,11 +7,16 @@ Build files
 - `bff/Dockerfile` — Node image for the Express BFF.
 - `nginx.conf` — SPA fallback and proxy `/api` to the BFF service.
 - `.dockerignore` and `bff/.dockerignore` — exclude local and sensitive files from build contexts.
-- `.github/workflows/main.yml` — builds and pushes both images on pushes to `main`.
+- `.github/workflows/main.yml` — builds and pushes both images on pushes to `main`, and includes the generated Android APK in the frontend image.
 
 Build and push images manually
 
 The repository does not include a Compose file. Build the images from the repository root, replacing `YOUR_DOCKERHUB_USER` with the account used by the deployment Compose file:
+
+The automated pipeline places the generated APK at `public/downloads/varista.apk`
+before building the frontend image, making it available at
+`/downloads/varista.apk`. For manual builds, create that file first if the
+Dashboard download should be included.
 
 ```powershell
 # Login to Docker Hub
@@ -31,7 +36,7 @@ docker push YOUR_DOCKERHUB_USER/varista-bff:latest
 Using GitHub Actions for automated publish
 
 1. Add two repository secrets in GitHub: `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (create token on Docker Hub).
-2. Push to `main` — `.github/workflows/main.yml` builds and pushes both `varista-fe:latest` and `varista-bff:latest`.
+2. Push to `main` — `.github/workflows/main.yml` builds the Android APK, includes it in the frontend image, and publishes both `varista-fe:latest` and `varista-bff:latest`. After deployment, it checks the frontend, BFF health and client-catalog endpoints and posts all stage/endpoint results to Slack.
 
 Notes & recommendations
 - For production, use pinned tags and CI workflows that tag images with the Git commit SHA or tag.
