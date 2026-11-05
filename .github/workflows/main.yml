@@ -65,11 +65,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       
-      - name: Build and push BFF/Frontend
+      - name: Build and push frontend image
         uses: docker/build-push-action@v4
         with:
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/varista-fe:latest
+
+      - name: Build and push BFF image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./bff
+          file: ./bff/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/varista-bff:latest
 
       - name: Notify Job Status
         if: always()
@@ -87,7 +97,7 @@ jobs:
                     "type": "section",
                     "text": {
                       "type": "mrkdwn",
-                      "text": "${{ job.status == 'success' && '✅ *Docker Images Pushed*' || '❌ *Docker Build Failed*' }}\n*Tags:* `latest`"
+                      "text": "${{ job.status == 'success' && '✅ *Docker Images Pushed*' || '❌ *Docker Build Failed*' }}\n*Images:* `varista-fe:latest`, `varista-bff:latest`"
                     }
                   }
                 ]

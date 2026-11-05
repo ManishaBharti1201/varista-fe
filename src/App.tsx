@@ -20,7 +20,6 @@ import EmployeeMgmt from './pages/EmployeeMgmt';
 import UserMgmt from './pages/UserMgmt';
 import { useUserStore } from './store/UserStore';
 import ReportsAnalytics from './pages/AnalyticsReports';
-import { useClientStore } from './store/ClientStore';
 
   const TenantLoginGuard: React.FC<{ children: React.ReactElement }> = ({ children }) => {
   const selectedTenantId = useTenantStore(state => state.selectedTenantId);
@@ -69,12 +68,10 @@ const ScrollToTop = () => {
 
 const App: React.FC = () => {
   const loadTenants = useTenantStore(state => state.loadTenants);
-  const loadClients = useClientStore(state => state.loadClients);
 
   useEffect(() => {
     loadTenants().catch(() => undefined);
-    loadClients().catch(error => console.error('Failed to restore workspace navigation', error));
-  }, [loadTenants, loadClients]);
+  }, [loadTenants]);
 
   return (
     <Router>

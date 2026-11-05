@@ -1,4 +1,5 @@
 
+import { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useUserStore } from "../store/UserStore";
 import { useClientStore } from "../store/ClientStore";
+import { useTenantStore } from "../store/TenantStore";
 import AppBrandIcon from "./AppBrandIcon";
 
 interface Props {
@@ -44,11 +46,17 @@ export default function Sidebar({
 }: Props) {
   const { user } = useUserStore();
   const { clients, selectedClientId, loading: clientsLoading, error: clientsError, loadClients } = useClientStore();
+  const selectedTenantId = useTenantStore(state => state.selectedTenantId);
   const selectedClient = clients.find(client => client.id === selectedClientId);
   const visibleMenuItems = menuItems.filter(item => selectedClient?.menuItems?.includes(item.key));
   const canShowAdminMenu = user?.role?.toLowerCase().includes('admin')
     && selectedClient?.menuItems?.includes('users');
   const userName = user ? `${user.firstName} ${user.lastName}` : 'User';
+
+  useEffect(() => {
+    if (!selectedTenantId || clients.length > 0 || clientsLoading || clientsError) return;
+    loadClients().catch(error => console.error('Failed to load workspace navigation', error));
+  }, [selectedTenantId, clients.length, clientsLoading, clientsError, loadClients]);
 
   return (
     <aside
