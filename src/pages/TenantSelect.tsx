@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Building2, Check, ChevronDown, Download, Search, ShieldCheck, Smartphone } from 'lucide-react';
+import { Apple, ArrowRight, BarChart3, Building2, Check, ChevronDown, Play, Search, ShieldCheck, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTenantStore } from '../store/TenantStore';
 import { useClientStore } from '../store/ClientStore';
@@ -122,34 +122,62 @@ export default function TenantSelect() {
     name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-x-hidden overflow-y-auto bg-navy-900 p-4 sm:p-6">
+    <main className="relative flex min-h-screen items-center justify-center overflow-x-hidden bg-navy-900 p-4 sm:p-6 lg:py-10">
       <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
       <div className="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
-      <section className="relative my-2 w-full max-w-md rounded-[1.75rem] border border-white/10 bg-white p-6 shadow-2xl shadow-black/20 sm:my-0 sm:rounded-[2rem] sm:p-10">
-        <div className="mb-8 flex items-center gap-3 sm:mb-10">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-navy-900 shadow-lg shadow-indigo-900/20">
-            <AppBrandIcon className="h-6 w-6 text-white" />
+      <div className="relative my-2 grid w-full max-w-6xl items-center gap-8 lg:my-0 lg:grid-cols-[minmax(0,1fr)_28rem] lg:gap-12">
+        <section className="mx-auto w-full max-w-2xl px-2 py-4 text-white sm:px-4 lg:py-0">
+          <div className="mb-8 flex items-center gap-3 sm:mb-10">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-lg shadow-indigo-900/20">
+              <AppBrandIcon className="h-6 w-6 text-navy-900" />
+            </div>
+            <div>
+              <p className="text-xl font-black tracking-tight">Syncra</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.25em] text-indigo-300">Workforce Hub</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xl font-black tracking-tight text-slate-900">Syncra</p>
-            <p className="text-[9px] font-black uppercase tracking-[0.25em] text-indigo-500">Workforce Hub</p>
+
+          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.3em] text-indigo-300">One workspace. Total clarity.</p>
+          <h1 className="text-3xl font-black leading-tight tracking-tighter sm:text-4xl lg:text-5xl">
+            Precision <span className="text-indigo-400">workforce</span> management.
+          </h1>
+          <p className="mt-4 max-w-lg text-sm font-medium leading-6 text-slate-300 sm:text-base sm:leading-7">
+            Keep attendance, payroll, and team operations moving from one secure command center.
+          </p>
+
+          <div className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-3 lg:grid-cols-1">
+            {[
+              { title: 'Muster Tracking', desc: 'GPS-verified real-time attendance.', icon: Zap, color: 'text-amber-400' },
+              { title: 'Automated Payroll', desc: 'Error-free NH and OT calculations.', icon: BarChart3, color: 'text-emerald-400' },
+              { title: 'Bank-Grade Security', desc: 'Token-based access for every session.', icon: ShieldCheck, color: 'text-indigo-400' }
+            ].map(item => (
+              <div key={item.title} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:p-4">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-2.5">
+                  <item.icon className={`h-5 w-5 ${item.color}`} />
+                </div>
+                <div>
+                  <h2 className="text-[10px] font-black uppercase tracking-widest sm:text-xs">{item.title}</h2>
+                  <p className="mt-1 text-xs font-medium text-slate-400">{item.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
 
-        <div className="mb-8">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-            <Building2 className="h-7 w-7" />
+          <p className="mt-6 text-[9px] font-black uppercase tracking-widest text-slate-500 lg:mt-8">v3.0.4 Stable Build · © 2026 Syncra Systems</p>
+        </section>
+
+        <section className="relative mx-auto w-full max-w-md rounded-[1.75rem] border border-white/10 bg-white p-6 shadow-2xl shadow-black/20 sm:rounded-[2rem] sm:p-10">
+          <div className="mb-7">
+            <h2 className="text-2xl font-black leading-tight tracking-tight text-slate-900 sm:text-3xl">Choose your workspace</h2>
+            <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Select the tenant you want to access to continue securely.</p>
           </div>
-          <h1 className="text-2xl font-black leading-tight tracking-tight text-slate-900 sm:text-3xl">Choose your workspace</h1>
-          <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Select the tenant you want to access to continue securely.</p>
-        </div>
 
-        {error && <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-600">{error}</p>}
-        {clientError && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-600">{clientError}</p>}
+          {error && <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-600">{error}</p>}
+          {clientError && <p role="alert" className="mb-4 rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-600">{clientError}</p>}
 
-        {/* Custom dropdown */}
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400" id="tenant-label">Tenant</label>
-        <div ref={containerRef} className="relative mt-2" onKeyDown={handleKeyDown}>
+          {/* Custom dropdown */}
+          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400" id="tenant-label">Tenant</label>
+          <div ref={containerRef} className="relative mt-2" onKeyDown={handleKeyDown}>
           {/* Trigger button */}
           <button
             type="button"
@@ -256,24 +284,39 @@ export default function TenantSelect() {
               </ul>
             </div>
           )}
-        </div>
+          </div>
 
-        <button onClick={continueToLogin} disabled={!selected || loading || continuing} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-4 font-black text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
-          {continuing ? 'Loading workspace...' : 'Continue to login'} <ArrowRight className="h-5 w-5" />
-        </button>
-        <a
-          href="/downloads/varista.apk"
-          download="varista.apk"
-          className="mt-5 flex items-center justify-center gap-2 text-sm font-bold text-indigo-600 transition hover:text-indigo-700"
-        >
-          <Smartphone className="h-4 w-4" aria-hidden="true" />
-          <Download className="h-4 w-4" aria-hidden="true" />
-          Download Android app (APK)
-        </a>
-        <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-          <ShieldCheck className="h-4 w-4 text-emerald-500" /> Secure tenant access
-        </div>
-      </section>
+          <button onClick={continueToLogin} disabled={!selected || loading || continuing} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-4 font-black text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
+            {continuing ? 'Loading workspace...' : 'Continue to login'} <ArrowRight className="h-5 w-5" />
+          </button>
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <p className="text-xs font-semibold text-slate-500">Mobile app available at</p>
+            <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              title="Apple App Store (coming soon)"
+              aria-label="Apple App Store, coming soon"
+              disabled
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400"
+            >
+              <Apple className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <a
+              href="/downloads/Syncra.apk"
+              download="Syncra.apk"
+              title="Download Android app"
+              aria-label="Download Android app APK"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 transition hover:border-indigo-200 hover:bg-indigo-100"
+            >
+              <Play className="h-5 w-5 fill-current" aria-hidden="true" />
+            </a>
+            </div>
+          </div>
+          <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <ShieldCheck className="h-4 w-4 text-emerald-500" /> Secure tenant access
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

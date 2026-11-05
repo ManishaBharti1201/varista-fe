@@ -53,20 +53,11 @@ jobs:
 
   build-and-push:
     name: Build Image & Push to Docker Hub
-    needs: [init-notifications, build-android]
+    needs: [init-notifications]
     runs-on: self-hosted
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Download APK for frontend image
-        uses: actions/download-artifact@v4
-        with:
-          name: varista-debug-apk
-          path: public/downloads
-
-      - name: Name APK for public download
-        run: mv public/downloads/app-debug.apk public/downloads/varista.apk
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -148,13 +139,14 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Syncra.apk
 
       - name: Upload APK Artifact
         id: upload-apk
         uses: actions/upload-artifact@v4
         with:
-          name: varista-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Syncra-android-apk
+          path: android/app/build/outputs/apk/debug/Syncra.apk
           retention-days: 7
 
       - name: Notify Job Status
@@ -184,11 +176,17 @@ jobs:
 
   deploy:
     name: Deploy to Ubuntu VM
-    needs: [init-notifications, build-and-push]
+    needs: [init-notifications, build-and-push, build-android]
     runs-on: self-hosted
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Syncra-android-apk
+          path: ${{ runner.temp }}/varista-apk
 
       - name: Local Update and Deploy
         run: |
@@ -199,6 +197,14 @@ jobs:
             echo "INFISICAL_ENVIRONMENT=prod" >> .env
             docker compose pull
             docker compose up -d --force-recreate
+            frontend_container=$(docker compose ps -q frontend)
+            if [ -z "$frontend_container" ]; then
+              echo "Frontend container is not running after deployment" >&2
+              exit 1
+            fi
+            docker exec "$frontend_container" mkdir -p /usr/share/nginx/html/downloads
+            docker cp "$RUNNER_TEMP/varista-apk/Syncra.apk" \
+              "$frontend_container:/usr/share/nginx/html/downloads/Syncra.apk"
 
   verify-endpoints:
     name: Verify deployed endpoints
@@ -232,7 +238,7 @@ jobs:
           frontend_status=$(check_url https://varista.coresmith.duckdns.org/ /dev/null 20)
           health_status=$(check_url https://bff.coresmith.duckdns.org/api/health /dev/null 20)
           clients_status=$(check_url https://bff.coresmith.duckdns.org/api/clients "$RUNNER_TEMP/clients.json" 20)
-          apk_status=$(check_url https://varista.coresmith.duckdns.org/downloads/varista.apk /dev/null 60)
+          apk_status=$(check_url https://varista.coresmith.duckdns.org/downloads/Syncra.apk /dev/null 60)
 
           if [ "$clients_status" = "200" ] && ! python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(data,list) and len(data)>0 else 1)' "$RUNNER_TEMP/clients.json"; then
             clients_status="invalid catalog"
@@ -278,7 +284,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Deployed endpoints*\n• Frontend: <https://varista.coresmith.duckdns.org/|https://varista.coresmith.duckdns.org/> — `${{ needs.verify-endpoints.outputs.frontend }}`\n• BFF health: <https://bff.coresmith.duckdns.org/api/health|/api/health> — `${{ needs.verify-endpoints.outputs.health }}`\n• BFF clients: <https://bff.coresmith.duckdns.org/api/clients|/api/clients> — `${{ needs.verify-endpoints.outputs.clients }}`\n• Latest APK: <https://varista.coresmith.duckdns.org/downloads/varista.apk|Download APK> — `${{ needs.verify-endpoints.outputs.apk }}`"
+                    "text": "*Deployed endpoints*\n• Frontend: <https://varista.coresmith.duckdns.org/|https://varista.coresmith.duckdns.org/> — `${{ needs.verify-endpoints.outputs.frontend }}`\n• BFF health: <https://bff.coresmith.duckdns.org/api/health|/api/health> — `${{ needs.verify-endpoints.outputs.health }}`\n• BFF clients: <https://bff.coresmith.duckdns.org/api/clients|/api/clients> — `${{ needs.verify-endpoints.outputs.clients }}`\n• Latest APK: <https://varista.coresmith.duckdns.org/downloads/Syncra.apk|Download Syncra APK> — `${{ needs.verify-endpoints.outputs.apk }}`"
                   }
                 },
                 {

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import {
   Mail, Lock, Eye, EyeOff,
-  AlertCircle, ShieldCheck, Zap, BarChart3, Fingerprint, ArrowLeft, CheckCircle2, KeyRound, X
+  AlertCircle, Fingerprint, ArrowLeft, CheckCircle2, KeyRound, X
 } from "lucide-react";
 import { Toast } from "../components/Toast";
 import { useUserStore } from "../store/UserStore";
@@ -138,62 +138,7 @@ export default function LoginRegister() {
 
   return (
     <div className="min-h-screen bg-slate-50 lg:flex">
-      {/* 1. LEFT SIDE - BRANDING & FEATURE SHOWCASE */}
-      <div className="relative hidden overflow-hidden bg-navy-900 p-12 lg:flex lg:min-h-screen lg:w-[55%] lg:flex-col lg:justify-between lg:p-16">
-        {/* Decorative Abstract Shapes */}
-        <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-[-5%] left-[-5%] w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl"></div>
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-20">
-            <div className="w-14 h-14 bg-white rounded-[1.25rem] flex items-center justify-center shadow-xl shadow-indigo-900/40">
-              {selectedClient?.theme.logoUrl
-                ? <img src={selectedClient.theme.logoUrl} alt="" className="w-8 h-8 object-contain" />
-                : <AppBrandIcon className="w-8 h-8 text-navy-900" />}
-            </div>
-            <div>
-              <h1 className="font-black text-3xl text-white tracking-tight uppercase">{selectedClient?.theme.appName || 'Syncra'}</h1>
-              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Workforce Hub</p>
-            </div>
-          </div>
-
-          <div className="max-w-xl">
-            <p className="mb-4 text-xs font-black uppercase tracking-[0.3em] text-indigo-300">One workspace. Total clarity.</p>
-            <h2 className="text-5xl font-black leading-tight tracking-tighter text-white">
-              Precision <span className="text-indigo-400">workforce</span> management.
-            </h2>
-            <p className="mt-6 max-w-lg text-base font-medium leading-7 text-slate-300">
-              Keep attendance, payroll, and team operations moving from one secure command center.
-            </p>
-
-            <div className="mt-12 grid grid-cols-1 gap-4">
-              {[
-                { title: "Muster Tracking", desc: "GPS-verified real-time attendance.", icon: Zap, color: "text-amber-400" },
-                { title: "Automated Payroll", desc: "Error-free NH and OT calculations.", icon: BarChart3, color: "text-emerald-400" },
-                { title: "Bank-Grade Security", desc: "Token-based access for every session.", icon: ShieldCheck, color: "text-indigo-400" }
-              ].map((item, i) => (
-                <div key={i} className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.08]">
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <item.icon className={`h-5 w-5 ${item.color}`} />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-black uppercase tracking-widest text-white">{item.title}</h3>
-                    <p className="mt-1 text-sm font-medium text-slate-400">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="relative z-10 text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-4">
-          <span>v3.0.4 Stable Build</span>
-          <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-          <span>© 2026 Syncra Systems</span>
-        </div>
-      </div>
-
-      {/* 2. RIGHT SIDE - LOGIN FORM */}
+      {/* Login form */}
       <div className="flex flex-1 items-center justify-center bg-slate-50 px-6 py-10 sm:px-8 lg:px-12">
         <div className="w-full max-w-md">
           <button type="button" onClick={() => navigate('/select-tenant')} className="mb-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 transition hover:text-indigo-600">
