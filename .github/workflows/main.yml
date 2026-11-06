@@ -244,7 +244,6 @@ jobs:
             fi
             downloads_dir="$HOME/varista/data/downloads"
             mkdir -p "$downloads_dir"
-            chmod 755 "$downloads_dir"
             mounted_downloads_dir=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/usr/share/nginx/html/downloads"}}{{.Source}}{{end}}{{end}}' "$frontend_container")
             if [ -z "$mounted_downloads_dir" ] || [ "$(realpath "$mounted_downloads_dir")" != "$(realpath "$downloads_dir")" ]; then
               echo "Mount $downloads_dir to /usr/share/nginx/html/downloads in the frontend service." >&2
