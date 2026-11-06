@@ -293,8 +293,8 @@ jobs:
           if [ "$clients_status" = "200" ] && ! python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(data,list) and len(data)>0 else 1)' "$RUNNER_TEMP/clients.json"; then
             clients_status="invalid catalog"
           fi
-          if [ "$manifest_status" = "200" ] && ! python3 -c 'import json,re,sys; data=json.load(open(sys.argv[1])); code=data.get("versionCode"); sys.exit(0 if isinstance(code,int) and code>0 and data.get("versionName") and data.get("apkUrl")==f"https://varista.coresmith.duckdns.org/downloads/Syncra-{code}.apk" and re.fullmatch(r"[0-9a-fA-F]{64}",data.get("sha256","")) else 1)' "$RUNNER_TEMP/version.json"; then
-            manifest_status="invalid manifest"
+          if [ "$manifest_status" = "200" ] && ! python3 -c 'import json,re,sys; data=json.load(open(sys.argv[1])); code=data.get("versionCode"); sys.exit(0 if isinstance(code,int) and code>0 and data.get("versionName") and data.get("apkUrl")==f"https://varista.coresmith.duckdns.org/downloads/Syncra-{code}.apk" and re.fullmatch(r"[0-9a-fA-F]{64}",data.get("sha256","")) else 1)' "$RUNNER_TEMP/version.json" 2>/dev/null; then
+            manifest_status="invalid manifest (expected update JSON; check downloads volume)"
           fi
           if [ "$manifest_status" = "200" ]; then
             apk_url=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["apkUrl"])' "$RUNNER_TEMP/version.json")

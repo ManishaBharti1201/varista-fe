@@ -8,6 +8,7 @@ import android.provider.Settings;
 import android.util.Log;
 
 import androidx.core.content.FileProvider;
+import androidx.core.content.pm.PackageInfoCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -40,6 +41,9 @@ public class AppUpdaterPlugin extends Plugin {
         new Thread(() -> {
             HttpURLConnection connection = null;
             try {
+                long installedVersionCode = PackageInfoCompat.getLongVersionCode(
+                        getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0)
+                );
                 connection = (HttpURLConnection) new URL(MANIFEST_URL).openConnection();
                 connection.setConnectTimeout(10000);
                 connection.setReadTimeout(15000);
@@ -75,7 +79,7 @@ public class AppUpdaterPlugin extends Plugin {
                 }
 
                 JSObject result = new JSObject();
-                result.put("available", versionCode > BuildConfig.VERSION_CODE);
+                result.put("available", versionCode > installedVersionCode);
                 result.put("versionCode", versionCode);
                 result.put("versionName", versionName);
                 result.put("apkUrl", apkUrl);
