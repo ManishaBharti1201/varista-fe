@@ -1,9 +1,11 @@
 
 // Centralized URLs and endpoint builders for the app
 const envBff = (window as any)._env_?.REACT_APP_BFF_URL || process.env.REACT_APP_BFF_URL || '';
+const productionBff = process.env.NODE_ENV === 'production'
+  ? 'https://bff.coresmith.duckdns.org'
+  : '';
 
-// Default to empty string for same-origin proxying to avoid CORS and environment mismatches
-export const bffBase: string = envBff || '';
+export const bffBase: string = envBff || productionBff;
 
 export const endpoints = {
   clients: (base: string = bffBase) => `${base || ''}/api/clients`,
