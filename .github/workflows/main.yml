@@ -37,7 +37,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Commit:* `${{ github.event.head_commit.message }}`"
+                    "text": "*Commit:* `${{ toJSON(github.event.head_commit.message) }}`"
                   }
                 },
                 {
