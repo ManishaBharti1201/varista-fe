@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Apple, ArrowRight, BarChart3, Building2, Check, ChevronDown, Play, Search, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowRight, BarChart3, Building2, Check, ChevronDown, Search, ShieldCheck, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTenantStore } from '../store/TenantStore';
 import { useClientStore } from '../store/ClientStore';
@@ -145,6 +145,30 @@ export default function TenantSelect() {
             Keep attendance, payroll, and team operations moving from one secure command center.
           </p>
 
+          <div className="mt-6">
+            <p className="mb-3 text-xs font-semibold text-slate-300">Mobile app available at</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                title="Apple App Store (coming soon)"
+                aria-label="Apple App Store, coming soon"
+                disabled
+                className="cursor-not-allowed rounded-xl opacity-60"
+              >
+                <img src="/app-store-badge.png" alt="Download on the App Store (coming soon)" className="h-auto w-40 sm:w-44" />
+              </button>
+              <a
+                href="/downloads/Syncra.apk"
+                download="Syncra.apk"
+                title="Download Android app"
+                aria-label="Download Syncra Android app APK"
+                className="rounded-xl transition hover:opacity-85 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-2 focus:ring-offset-navy-900"
+              >
+                <img src="/google-play-badge.png" alt="Download Syncra for Android" className="h-auto w-40 sm:w-44" />
+              </a>
+            </div>
+          </div>
+
           <div className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-3 lg:grid-cols-1">
             {[
               { title: 'Muster Tracking', desc: 'GPS-verified real-time attendance.', icon: Zap, color: 'text-amber-400' },
@@ -289,29 +313,6 @@ export default function TenantSelect() {
           <button onClick={continueToLogin} disabled={!selected || loading || continuing} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-4 font-black text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50">
             {continuing ? 'Loading workspace...' : 'Continue to login'} <ArrowRight className="h-5 w-5" />
           </button>
-          <div className="mt-5 flex flex-col items-center gap-2">
-            <p className="text-xs font-semibold text-slate-500">Mobile app available at</p>
-            <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              title="Apple App Store (coming soon)"
-              aria-label="Apple App Store, coming soon"
-              disabled
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400"
-            >
-              <Apple className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <a
-              href="/downloads/Syncra.apk"
-              download="Syncra.apk"
-              title="Download Android app"
-              aria-label="Download Android app APK"
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 transition hover:border-indigo-200 hover:bg-indigo-100"
-            >
-              <Play className="h-5 w-5 fill-current" aria-hidden="true" />
-            </a>
-            </div>
-          </div>
           <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
             <ShieldCheck className="h-4 w-4 text-emerald-500" /> Secure tenant access
           </div>

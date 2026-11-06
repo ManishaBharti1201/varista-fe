@@ -203,6 +203,15 @@ export default function QuotationCreate() {
                         placeholder="Service description..."
                       />
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">HSN/SAC</label>
+                      <input
+                        value={it.hsnSac}
+                        onChange={(e) => updateItemField(idx, "hsnSac", e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-100 outline-none"
+                        placeholder="HSN/SAC code"
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase">Qty</label>
@@ -238,6 +247,7 @@ export default function QuotationCreate() {
                 <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[11px] tracking-wider">
                   <tr>
                     <th className="py-4 px-4 text-left">Description</th>
+                    <th className="py-4 px-4 text-left w-32">HSN/SAC</th>
                     <th className="py-4 px-4 text-left w-24">Qty</th>
                     <th className="py-4 px-4 text-left w-32">Rate</th>
                     <th className="py-4 px-4 text-left w-28">Unit</th>
@@ -253,6 +263,13 @@ export default function QuotationCreate() {
                           value={it.description}
                           onChange={(e) => updateItemField(idx, "description", e.target.value)}
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-indigo-400 outline-none transition-all"
+                        />
+                      </td>
+                      <td className="p-3">
+                        <input
+                          value={it.hsnSac}
+                          onChange={(e) => updateItemField(idx, "hsnSac", e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none"
                         />
                       </td>
                       <td className="p-3"><input type="number" value={it.quantity} onChange={(e) => updateItemField(idx, "quantity", e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none" /></td>

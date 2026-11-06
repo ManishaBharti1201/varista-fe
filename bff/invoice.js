@@ -18,7 +18,7 @@ router.post('/invoice/create', async (req, res) => {
     return res.status(400).json({ message: 'invoice payload is required' });
   }
   try {
-    const headers = tenantHeaders(req, {});
+    const headers = tenantHeaders(req, { 'Content-Type': 'application/json' });
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
@@ -114,7 +114,7 @@ router.get('/invoice/:id/download', async (req, res) => {
       });
     }
 
-    const body = await resp.buffer();
+    const body = Buffer.from(await resp.arrayBuffer());
     if (body.length < 5 || body.subarray(0, 5).toString('ascii') !== '%PDF-') {
       console.error(`[${new Date().toISOString()}] Invoice service returned a non-PDF response for ${req.params.id}`);
       return res.status(502).json({ message: 'The invoice service did not return a valid PDF.' });

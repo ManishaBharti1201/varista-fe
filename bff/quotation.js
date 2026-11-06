@@ -15,7 +15,7 @@ router.post('/quotation/create', async (req, res) => {
     return res.status(400).json({ message: 'quotation payload is required' });
   }
   try {
-    const headers = tenantHeaders(req, {});
+    const headers = tenantHeaders(req, { 'Content-Type': 'application/json' });
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
@@ -69,7 +69,7 @@ router.delete('/quotation/:id', async (req, res) => {
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    const resp = await fetchService(req, target, { method: 'DELETE', headers });
+    const resp = await fetch(target, { method: 'DELETE', headers });
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) return res.status(resp.status).json({ message: body?.message || 'external service error', details: body });
@@ -88,14 +88,14 @@ router.get('/quotation/:id/download', async (req, res) => {
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    const resp = await fetchService(req, target, { method: 'GET', headers });
+    const resp = await fetch(target, { method: 'GET', headers });
 
     if (!resp.ok) {
       const errorBody = await resp.text();
       return res.status(resp.status).json({ message: 'External service error', details: errorBody });
     }
 
-    const body = await resp.buffer();
+    const body = Buffer.from(await resp.arrayBuffer());
     res.setHeader('Content-Disposition', `attachment; filename="${req.params.id}.pdf"`);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', body.length);
