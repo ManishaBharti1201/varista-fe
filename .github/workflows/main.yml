@@ -249,10 +249,31 @@ jobs:
               echo "Mount $downloads_dir to /usr/share/nginx/html/downloads in the frontend service." >&2
               exit 1
             fi
-            cp "$RUNNER_TEMP/varista-apk/Syncra.apk" "$downloads_dir/Syncra-$GITHUB_RUN_NUMBER.apk"
-            cp "$RUNNER_TEMP/varista-apk/Syncra.apk" "$downloads_dir/Syncra.apk"
-            cp "$RUNNER_TEMP/varista-apk/version.json" "$downloads_dir/version.json.tmp"
-            mv "$downloads_dir/version.json.tmp" "$downloads_dir/version.json"
+            frontend_image=$(docker inspect --format '{{.Config.Image}}' "$frontend_container")
+            if [ -z "$frontend_image" ]; then
+              echo "Unable to determine the frontend image for publishing the update." >&2
+              exit 1
+            fi
+            if ! docker run --rm \
+              --user 0:0 \
+              --entrypoint /bin/sh \
+              -e APK_VERSION_CODE="$GITHUB_RUN_NUMBER" \
+              -v "$downloads_dir:/downloads:rw" \
+              -v "$RUNNER_TEMP/varista-apk:/artifacts:ro" \
+              "$frontend_image" \
+              -c 'set -eu
+                cp /artifacts/Syncra.apk "/downloads/Syncra-${APK_VERSION_CODE}.apk.tmp"
+                chmod 644 "/downloads/Syncra-${APK_VERSION_CODE}.apk.tmp"
+                mv "/downloads/Syncra-${APK_VERSION_CODE}.apk.tmp" "/downloads/Syncra-${APK_VERSION_CODE}.apk"
+                cp /artifacts/Syncra.apk /downloads/Syncra.apk.tmp
+                chmod 644 /downloads/Syncra.apk.tmp
+                mv /downloads/Syncra.apk.tmp /downloads/Syncra.apk
+                cp /artifacts/version.json /downloads/version.json.tmp
+                chmod 644 /downloads/version.json.tmp
+                mv /downloads/version.json.tmp /downloads/version.json'; then
+              echo "Docker could not publish update files into $downloads_dir. Check that the VM filesystem allows writes from Docker containers." >&2
+              exit 1
+            fi
 
   verify-endpoints:
     name: Verify deployed endpoints
