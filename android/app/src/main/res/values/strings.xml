@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Syncra</string>
     <string name="title_activity_main">Syncra</string>
-    <string name="package_name">com.varista.app</string>
-    <string name="custom_url_scheme">com.varista.app</string>
+    <string name="package_name">com.syncra.app</string>
+    <string name="custom_url_scheme">com.syncra.app</string>
 </resources>

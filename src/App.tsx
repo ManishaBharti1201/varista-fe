@@ -20,6 +20,7 @@ import EmployeeMgmt from './pages/EmployeeMgmt';
 import UserMgmt from './pages/UserMgmt';
 import { useUserStore } from './store/UserStore';
 import ReportsAnalytics from './pages/AnalyticsReports';
+import AppUpdatePrompt from './components/AppUpdatePrompt';
 
   const TenantLoginGuard: React.FC<{ children: React.ReactElement }> = ({ children }) => {
   const selectedTenantId = useTenantStore(state => state.selectedTenantId);
@@ -76,6 +77,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <ScrollToTop />
+      <AppUpdatePrompt />
       <Routes>
         <Route path="/select-tenant" element={<TenantSelect />} />
         <Route path="/login" element={<TenantLoginGuard><LoginRegister /></TenantLoginGuard>} />

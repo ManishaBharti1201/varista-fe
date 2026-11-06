@@ -2,8 +2,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.dashboard',
-  appName: 'My Dashboard',
+  appId: 'com.syncra.app',
+  appName: 'Syncra',
   webDir: 'build', // or 'build'
 };
 

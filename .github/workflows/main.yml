@@ -107,7 +107,7 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
   build-android:
-    name: Build Android Debug APK
+    name: Build Signed Android Release APK
     needs: init-notifications
     runs-on: ubuntu-latest
     steps:
@@ -133,20 +133,60 @@ jobs:
       - name: Build React Frontend
         run: CI=false npm run build
 
-      - name: Sync and Build APK
+      - name: Prepare Android signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "Configure the $name repository secret before building app updates." >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          test -s android/app/release.keystore
+
+      - name: Sync and Build Signed Release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/app/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           npx cap sync android
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/Syncra.apk
+          ./gradlew assembleRelease \
+            -PVERSION_CODE="$GITHUB_RUN_NUMBER" \
+            -PVERSION_NAME="1.0.$GITHUB_RUN_NUMBER"
+          mkdir -p "$RUNNER_TEMP/varista-apk"
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/varista-apk/Syncra.apk"
+          VERSION_CODE="$GITHUB_RUN_NUMBER" \
+          VERSION_NAME="1.0.$GITHUB_RUN_NUMBER" \
+          APK_SHA256="$(sha256sum "$RUNNER_TEMP/varista-apk/Syncra.apk" | cut -d ' ' -f 1)" \
+          node -e '
+            const fs = require("fs");
+            const { VERSION_CODE, VERSION_NAME, APK_SHA256 } = process.env;
+            const manifest = {
+              versionCode: Number(VERSION_CODE),
+              versionName: VERSION_NAME,
+              apkUrl: `https://varista.coresmith.duckdns.org/downloads/Syncra-${VERSION_CODE}.apk`,
+              sha256: APK_SHA256
+            };
+            fs.writeFileSync(`${process.env.RUNNER_TEMP}/varista-apk/version.json`, JSON.stringify(manifest, null, 2));
+          '
 
       - name: Upload APK Artifact
         id: upload-apk
         uses: actions/upload-artifact@v4
         with:
           name: Syncra-android-apk
-          path: android/app/build/outputs/apk/debug/Syncra.apk
+          path: |
+            ${{ runner.temp }}/varista-apk/Syncra.apk
+            ${{ runner.temp }}/varista-apk/version.json
           retention-days: 7
 
       - name: Notify Job Status
@@ -202,9 +242,18 @@ jobs:
               echo "Frontend container is not running after deployment" >&2
               exit 1
             fi
-            docker exec "$frontend_container" mkdir -p /usr/share/nginx/html/downloads
-            docker cp "$RUNNER_TEMP/varista-apk/Syncra.apk" \
-              "$frontend_container:/usr/share/nginx/html/downloads/Syncra.apk"
+            downloads_dir="$HOME/varista/data/downloads"
+            mkdir -p "$downloads_dir"
+            chmod 755 "$downloads_dir"
+            mounted_downloads_dir=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/usr/share/nginx/html/downloads"}}{{.Source}}{{end}}{{end}}' "$frontend_container")
+            if [ -z "$mounted_downloads_dir" ] || [ "$(realpath "$mounted_downloads_dir")" != "$(realpath "$downloads_dir")" ]; then
+              echo "Mount $downloads_dir to /usr/share/nginx/html/downloads in the frontend service." >&2
+              exit 1
+            fi
+            cp "$RUNNER_TEMP/varista-apk/Syncra.apk" "$downloads_dir/Syncra-$GITHUB_RUN_NUMBER.apk"
+            cp "$RUNNER_TEMP/varista-apk/Syncra.apk" "$downloads_dir/Syncra.apk"
+            cp "$RUNNER_TEMP/varista-apk/version.json" "$downloads_dir/version.json.tmp"
+            mv "$downloads_dir/version.json.tmp" "$downloads_dir/version.json"
 
   verify-endpoints:
     name: Verify deployed endpoints
@@ -216,6 +265,7 @@ jobs:
       health: ${{ steps.check.outputs.health }}
       clients: ${{ steps.check.outputs.clients }}
       apk: ${{ steps.check.outputs.apk }}
+      update_manifest: ${{ steps.check.outputs.update_manifest }}
     steps:
       - name: Check public endpoints
         id: check
@@ -238,24 +288,40 @@ jobs:
           frontend_status=$(check_url https://varista.coresmith.duckdns.org/ /dev/null 20)
           health_status=$(check_url https://bff.coresmith.duckdns.org/api/health /dev/null 20)
           clients_status=$(check_url https://bff.coresmith.duckdns.org/api/clients "$RUNNER_TEMP/clients.json" 20)
-          apk_status=$(check_url https://varista.coresmith.duckdns.org/downloads/Syncra.apk /dev/null 60)
+          manifest_status=$(check_url https://varista.coresmith.duckdns.org/downloads/version.json "$RUNNER_TEMP/version.json" 20)
 
           if [ "$clients_status" = "200" ] && ! python3 -c 'import json,sys; data=json.load(open(sys.argv[1])); sys.exit(0 if isinstance(data,list) and len(data)>0 else 1)' "$RUNNER_TEMP/clients.json"; then
             clients_status="invalid catalog"
+          fi
+          if [ "$manifest_status" = "200" ] && ! python3 -c 'import json,re,sys; data=json.load(open(sys.argv[1])); code=data.get("versionCode"); sys.exit(0 if isinstance(code,int) and code>0 and data.get("versionName") and data.get("apkUrl")==f"https://varista.coresmith.duckdns.org/downloads/Syncra-{code}.apk" and re.fullmatch(r"[0-9a-fA-F]{64}",data.get("sha256","")) else 1)' "$RUNNER_TEMP/version.json"; then
+            manifest_status="invalid manifest"
+          fi
+          if [ "$manifest_status" = "200" ]; then
+            apk_url=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["apkUrl"])' "$RUNNER_TEMP/version.json")
+            apk_status=$(check_url "$apk_url" "$RUNNER_TEMP/Syncra.apk" 60)
+            if [ "$apk_status" = "200" ] && ! python3 -c 'import sys,zipfile; sys.exit(0 if zipfile.is_zipfile(sys.argv[1]) else 1)' "$RUNNER_TEMP/Syncra.apk"; then
+              apk_status="invalid APK"
+            elif [ "$apk_status" = "200" ] && ! python3 -c 'import hashlib,json,sys; manifest=json.load(open(sys.argv[1])); actual=hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest(); sys.exit(0 if actual.lower()==manifest["sha256"].lower() else 1)' "$RUNNER_TEMP/version.json" "$RUNNER_TEMP/Syncra.apk"; then
+              apk_status="checksum mismatch"
+            fi
+          else
+            apk_status="update manifest unavailable"
           fi
 
           echo "frontend=$frontend_status" >> "$GITHUB_OUTPUT"
           echo "health=$health_status" >> "$GITHUB_OUTPUT"
           echo "clients=$clients_status" >> "$GITHUB_OUTPUT"
           echo "apk=$apk_status" >> "$GITHUB_OUTPUT"
+          echo "update_manifest=$manifest_status" >> "$GITHUB_OUTPUT"
 
-          printf 'Frontend: %s\nBFF health: %s\nBFF clients: %s\nAPK download: %s\n' \
-            "$frontend_status" "$health_status" "$clients_status" "$apk_status"
+          printf 'Frontend: %s\nBFF health: %s\nBFF clients: %s\nAPK download: %s\nUpdate manifest: %s\n' \
+            "$frontend_status" "$health_status" "$clients_status" "$apk_status" "$manifest_status"
 
           [ "$frontend_status" = "200" ] &&
             [ "$health_status" = "200" ] &&
             [ "$clients_status" = "200" ] &&
-            [ "$apk_status" = "200" ]
+            [ "$apk_status" = "200" ] &&
+            [ "$manifest_status" = "200" ]
 
   pipeline-summary:
     name: Post pipeline summary to Slack
@@ -277,14 +343,14 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "🏁 *Pipeline summary*\n• Android APK build: `${{ needs.build-android.result }}`\n• Docker image build/push: `${{ needs.build-and-push.result }}`\n• VM deployment: `${{ needs.deploy.result }}`\n• Endpoint checks: `${{ needs.verify-endpoints.result }}`"
+                    "text": "🏁 *Pipeline summary*\n• Signed Android APK build: `${{ needs.build-android.result }}`\n• Docker image build/push: `${{ needs.build-and-push.result }}`\n• VM deployment: `${{ needs.deploy.result }}`\n• Endpoint checks: `${{ needs.verify-endpoints.result }}`"
                   }
                 },
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Deployed endpoints*\n• Frontend: <https://varista.coresmith.duckdns.org/|https://varista.coresmith.duckdns.org/> — `${{ needs.verify-endpoints.outputs.frontend }}`\n• BFF health: <https://bff.coresmith.duckdns.org/api/health|/api/health> — `${{ needs.verify-endpoints.outputs.health }}`\n• BFF clients: <https://bff.coresmith.duckdns.org/api/clients|/api/clients> — `${{ needs.verify-endpoints.outputs.clients }}`\n• Latest APK: <https://varista.coresmith.duckdns.org/downloads/Syncra.apk|Download Syncra APK> — `${{ needs.verify-endpoints.outputs.apk }}`"
+                    "text": "*Deployed endpoints*\n• Frontend: <https://varista.coresmith.duckdns.org/|https://varista.coresmith.duckdns.org/> — `${{ needs.verify-endpoints.outputs.frontend }}`\n• BFF health: <https://bff.coresmith.duckdns.org/api/health|/api/health> — `${{ needs.verify-endpoints.outputs.health }}`\n• BFF clients: <https://bff.coresmith.duckdns.org/api/clients|/api/clients> — `${{ needs.verify-endpoints.outputs.clients }}`\n• Update manifest: `${{ needs.verify-endpoints.outputs.update_manifest }}`\n• Latest APK: <https://varista.coresmith.duckdns.org/downloads/Syncra.apk|Download Syncra APK> — `${{ needs.verify-endpoints.outputs.apk }}`"
                   }
                 },
                 {

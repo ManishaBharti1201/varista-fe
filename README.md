@@ -103,6 +103,40 @@ Android and iOS Capacitor project files are under `android/` and `ios/`.
 Capacitor CLI and platform commands are available through the root npm
 dependencies; native builds also require the platform-specific SDKs and tools.
 
+### Android APK updates
+
+The Android app checks `https://varista.coresmith.duckdns.org/downloads/version.json`
+and offers newer versions for installation. The VM's frontend Compose service
+must mount the persistent APK directory:
+
+```yaml
+volumes:
+  - ./data/downloads:/usr/share/nginx/html/downloads:ro
+```
+
+The deployment workflow writes the latest APK and versioned APKs to
+`~/varista/data/downloads`. Before the first signed release build, configure
+these GitHub Actions repository secrets: `ANDROID_KEYSTORE_BASE64`,
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`.
+Generate the keystore once:
+
+```sh
+keytool -genkeypair -v -keystore syncra-release.jks -alias syncra \
+  -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Store its Base64 content and credentials as those repository secrets. Never
+commit the keystore. Use the same keystore for every build and keep a secure
+backup; changing the key prevents Android from installing updates over the
+existing app.
+
+The APK uses application ID `com.syncra.app`. Changing the previous package
+name means Android treats this as a separate app; users must install this app
+once and may uninstall the old app separately. The existing pipeline produced
+debug APKs, whose signing key may differ between builds. Use the same release
+keystore for subsequent builds so Android can install updates in place. Users
+must allow Syncra to install unknown apps and confirm installation in Android.
+
 ## Docker
 
 The frontend and BFF each have a Dockerfile. See [DOCKER.md](./DOCKER.md) for
