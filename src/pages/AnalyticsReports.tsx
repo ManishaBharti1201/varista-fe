@@ -7,6 +7,7 @@ import {
 import { Toast } from '../components/Toast';
 import { apiRequest } from '../utils/apiClient';
 import { endpoints } from '../config/urls';
+import { formatDateOnly, formatTimestamp, toDateOnlyString } from '../utils/dateTime';
 
 export default function AnalyticsReports() {
   const [activeTab, setActiveTab] = useState('calendar');
@@ -106,7 +107,7 @@ export default function AnalyticsReports() {
       const response = await apiRequest(endpoints.holidayCreate(), {
         method: 'POST',
         body: JSON.stringify({
-          date: selectedDate.toISOString().split('T')[0],
+          date: toDateOnlyString(selectedDate),
           name: holidayName,
           type: holidayType === 'public' ? 'PH' : 'NH'
         })
@@ -131,7 +132,7 @@ export default function AnalyticsReports() {
       const response = await apiRequest(endpoints.holidayDelete(), {
         method: 'POST',
         body: JSON.stringify({
-          date: holiday.date.toISOString().split('T')[0],
+          date: toDateOnlyString(holiday.date),
           type: holiday.type === 'public' ? 'PH' : 'NH'
         })
       });
@@ -344,7 +345,7 @@ export default function AnalyticsReports() {
                       <td className="px-6 py-5 text-center">
                         <span className="px-4 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">{r.generatedMonth}</span>
                       </td>
-                      <td className="px-6 py-5 text-center text-xs font-bold text-slate-400">{r.creationDate}</td>
+                      <td className="px-6 py-5 text-center text-xs font-bold text-slate-400">{formatTimestamp(r.creationDate)}</td>
                       <td className="px-8 py-5">
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => handleDownloadBlob(r.id, r.fileName)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all">
@@ -373,7 +374,7 @@ export default function AnalyticsReports() {
                     <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><FileText size={20}/></div>
                     <div className="overflow-hidden">
                       <p className="text-sm font-black text-slate-900 truncate">{r.fileName}</p>
-                      <p className="text-[10px] font-bold text-slate-400">Uploaded: {r.creationDate}</p>
+                      <p className="text-[10px] font-bold text-slate-400">Uploaded: {formatTimestamp(r.creationDate)}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -409,7 +410,7 @@ export default function AnalyticsReports() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selected Date</p>
-                  <p className="text-sm font-black text-slate-900">{selectedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                  <p className="text-sm font-black text-slate-900">{formatDateOnly(toDateOnlyString(selectedDate), { month: 'long' })}</p>
                 </div>
               </div>
 

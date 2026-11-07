@@ -71,11 +71,10 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
     get();
 
     const payload = {
-      ...companyData,
-      avatar: generateInitials(companyData.name || ''),
-      color: generateColor(),
-      createdAt: new Date().toISOString().split('T')[0],
-    };
+        ...companyData,
+        avatar: generateInitials(companyData.name || ''),
+        color: generateColor(),
+      };
 
 
     set({ loading: true });
@@ -88,7 +87,6 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       const data = await res.json();
       data.color = payload.color;
       data.avatar = payload.avatar;
-      data.createdAt = payload.createdAt;
       set(state => ({ companies: [...state.companies, normalizeCompany(data)], loading: false }));
 
     } catch (err) {
@@ -156,20 +154,10 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       return colors[Math.floor(Math.random() * colors.length)];
     };
 
-    const formatDate = (createdAt: string) => {
-      const date = new Date(createdAt);
-      return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    }
-
     const updated = companies.map(c => ({
       ...c,
       avatar: c.avatar || generateInitials(c.name),
-      color: c.color || generateColor(),
-      createdAt: formatDate(c.createdAt)
+      color: c.color || generateColor()
     }));
 
     set({ companies: updated });

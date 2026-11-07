@@ -157,16 +157,7 @@ export const useUserStore = create<UserState>()(
         const avatar = user.avatar || dummyImageBase64;
         const color = user.color || generateColor();
 
-        let joiningDate = user.joiningDate;
-        if (joiningDate) {
-          joiningDate = new Date(joiningDate).toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          });
-        }
-
-        set({ user: { ...user, avatar, color, joiningDate } });
+        set({ user: { ...user, avatar, color } });
       }
     }),
     {

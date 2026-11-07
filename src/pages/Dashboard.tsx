@@ -3,6 +3,7 @@ import {
   Users, Plus, X, Calendar as CalendarIcon, ArrowRight, 
   CalendarDays, IndianRupee, Briefcase, ArrowUpRight, ShieldCheck, CheckCircle2, Clock3, Activity
 } from "lucide-react";
+import { formatDateOnly, todayDateOnly } from '../utils/dateTime';
 
 interface UpcomingEvent {
   title: string;
@@ -36,11 +37,6 @@ export default function Dashboard() {
     setNewEvent({ title: "", date: "" });
   };
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-  };
-
   return (
     <div className="min-h-full overflow-x-hidden bg-slate-50">
       {/* 1. Header - Optimized Padding for Mobile */}
@@ -58,7 +54,7 @@ export default function Dashboard() {
           </div>
           <div className="bg-white/5 backdrop-blur-xl px-4 py-2 md:px-6 md:py-4 rounded-xl md:rounded-[2rem] border border-white/10">
             <p className="text-white font-black text-xs md:text-base">
-              {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+              {formatDateOnly(todayDateOnly(), { weekday: 'short' })}
             </p>
           </div>
         </div>
@@ -136,7 +132,7 @@ export default function Dashboard() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm md:text-lg font-black text-slate-900 truncate tracking-tight">{event.title}</p>
                   <p className="text-[9px] md:text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
-                    {formatDate(event.date)}
+                    {formatDateOnly(event.date)}
                   </p>
                 </div>
                 <ArrowRight size={14} className="text-slate-300" />

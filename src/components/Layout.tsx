@@ -7,6 +7,7 @@ import { useUserStore } from '../store/UserStore';
 import { useTenantStore } from '../store/TenantStore';
 import { apiRequest } from '../utils/apiClient';
 import { endpoints } from '../config/urls';
+import { formatTimestamp } from '../utils/dateTime';
 
 interface Notification {
   id: string;
@@ -79,22 +80,6 @@ export default function Layout() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatReadableDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    // Replace space with T only if T is not already present
-    const formattedStr = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
-    const d = new Date(formattedStr);
-    if (isNaN(d.getTime())) return dateStr; // Fallback to raw string if parsing fails
-    
-    return d.toLocaleString('en-IN', { 
-      day: '2-digit', 
-      month: 'short', 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    });
   };
 
   useEffect(() => {
@@ -217,7 +202,7 @@ export default function Layout() {
                     </div>
                     <p className="text-xs font-medium text-slate-500 leading-relaxed">{notif.description}</p>
                     <div className="flex items-center gap-1.5 mt-3 text-[10px] font-black text-slate-500 uppercase tracking-tighter">
-                      <Clock size={12} /> {formatReadableDate(notif.createDate)}
+                      <Clock size={12} /> {formatTimestamp(notif.createDate)}
                     </div>
                   </div>
                 </div>

@@ -6,6 +6,7 @@ import {
 import { Employee, useEmployeeStore } from '../store/EmployeeStore';
 import { Toast } from '../components/Toast';
 import AttendanceManagement from './Attendence';
+import { formatDateOnly, parseDateOnly, todayDateOnly, toDateOnlyString } from '../utils/dateTime';
 
 const payrollProfileFields: (keyof Employee)[] = [
     'basicSalary',
@@ -27,6 +28,11 @@ const normalizePayrollCategory = (category: string | null | undefined) => {
     if (normalized === 'SEMISKILLED') return 'Semiskilled';
     if (normalized === 'SKILLED') return 'Skilled';
     return category || '';
+};
+
+const normalizeEmployeeDate = (value: string): string | null => {
+    const date = parseDateOnly(value);
+    return date ? toDateOnlyString(date) : null;
 };
 
 export default function EmployeeMgmt() {
@@ -71,22 +77,6 @@ export default function EmployeeMgmt() {
         if (numeric.length > 0) formatted += numeric.substring(0, 5);
         if (numeric.length > 5) formatted += " " + numeric.substring(5, 10);
         return formatted;
-    };
-
-    const formatToBritish = (dateStr: string) => {
-        if (!dateStr) return "";
-        const parts = dateStr.split(/[-/ ]/);
-        if (parts.length !== 3) return dateStr;
-        const [year, month, day] = parts[0].length === 4 ? parts : [parts[2], parts[1], parts[0]];
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return `${day}/${months[parseInt(month) - 1] || month}/${year}`;
-    };
-
-    const formatEmployeeDate = (dateStr: string) => {
-        const match = dateStr?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (!match) return dateStr || 'N/A';
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return `${match[3]} ${months[Number(match[2]) - 1]} ${match[1]}`;
     };
 
     // --- Event Handlers ---
@@ -135,6 +125,24 @@ export default function EmployeeMgmt() {
         try {
             const employeeData = { ...formData };
             payrollProfileFields.forEach(field => delete employeeData[field]);
+            for (const field of ['dob', 'joiningDate'] as const) {
+                const value = employeeData[field];
+                if (!value) {
+                    if (field === 'joiningDate' && !selectedEmployee) {
+                        employeeData[field] = todayDateOnly();
+                    } else {
+                        delete employeeData[field];
+                    }
+                    continue;
+                }
+
+                const normalizedDate = normalizeEmployeeDate(value);
+                if (!normalizedDate) {
+                    showToast(`Enter ${field === 'dob' ? 'date of birth' : 'joining date'} as a valid date.`, 'error');
+                    return;
+                }
+                employeeData[field] = normalizedDate;
+            }
             for (const field of ['id', 'adhaar', 'eip', 'esic', 'uan'] as const) {
                 const value = employeeData[field];
                 if (value !== undefined) {
@@ -276,7 +284,7 @@ export default function EmployeeMgmt() {
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><Calendar size={10} /> Joined</p>
-                                    <p className="text-xs font-bold text-slate-700">{formatEmployeeDate(r.joiningDate)}</p>
+                                    <p className="text-xs font-bold text-slate-700">{formatDateOnly(r.joiningDate)}</p>
                                 </div>
                             </div>
                             <div className="flex gap-2">
@@ -327,7 +335,7 @@ export default function EmployeeMgmt() {
                                     </td>
                                     <td className="px-6 py-5 text-sm font-bold text-slate-600">{r.role}</td>
                                     <td className="px-6 py-5 text-xs font-mono text-slate-500 font-bold">{r.adhaar}</td>
-                                    <td className="px-6 py-5 text-xs font-bold text-slate-500">{formatEmployeeDate(r.joiningDate)}</td>
+                                    <td className="px-6 py-5 text-xs font-bold text-slate-500">{formatDateOnly(r.joiningDate)}</td>
                                     <td className="px-8 py-5">
                                         <div className="flex items-center justify-end gap-2">
                                             <button onClick={() => handleEditClick(r)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all"><Edit3Icon size={16} /></button>
@@ -383,7 +391,7 @@ export default function EmployeeMgmt() {
                                     <div>
                                         <label className={labelClass}>Date of Birth</label>
                                         <div className="relative">
-                                            <input type="text" readOnly value={formatToBritish(formData.dob || '')} onClick={() => dobRef.current?.showPicker()} placeholder="DD/MMM/YYYY" className={`${inputClass} cursor-pointer`} />
+                                            <input type="text" readOnly value={formData.dob ? formatDateOnly(formData.dob) : ''} onClick={() => dobRef.current?.showPicker()} placeholder="DD MMM YYYY" className={`${inputClass} cursor-pointer`} />
                                             <input type="date" ref={dobRef} name="dob" value={formData.dob || ""} onChange={handleInputChange} className="absolute inset-0 opacity-0 pointer-events-none" />
                                         </div>
                                     </div>
@@ -437,7 +445,7 @@ export default function EmployeeMgmt() {
                                     <div>
                                         <label className={labelClass}>Joining Date</label>
                                         <div className="relative">
-                                            <input type="text" readOnly value={formatToBritish(formData.joiningDate || '')} onClick={() => joiningDateRef.current?.showPicker()} placeholder="DD/MMM/YYYY" className={`${inputClass} cursor-pointer`} />
+                                            <input type="text" readOnly value={formData.joiningDate ? formatDateOnly(formData.joiningDate) : ''} onClick={() => joiningDateRef.current?.showPicker()} placeholder="DD MMM YYYY" className={`${inputClass} cursor-pointer`} />
                                             <input type="date" ref={joiningDateRef} name="joiningDate" value={formData.joiningDate || ""} onChange={handleInputChange} className="absolute inset-0 opacity-0 pointer-events-none" />
                                         </div>
                                     </div>

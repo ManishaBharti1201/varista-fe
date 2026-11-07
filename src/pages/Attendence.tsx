@@ -4,12 +4,13 @@ import {
     TimerOff, Calendar as CalendarIcon, ArrowUpRight, ArrowDownLeft
 } from 'lucide-react';
 import { useTimesheetStore } from '../store/TimesheetStore';
+import { formatClockTime, formatDateOnly, parseDateOnly, todayDateOnly } from '../utils/dateTime';
 
 export default function AttendanceManagement({ employee, isPopup = false }: any) {
     const { records, summary, loading, getTimesheet } = useTimesheetStore();
 
     // 1. Initialize State
-    const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-GB'));
+    const [selectedDate, setSelectedDate] = useState(todayDateOnly());
     const [currentDate, setCurrentDate] = useState(new Date());
 
     // 2. Fetch data
@@ -23,18 +24,14 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
     useEffect(() => {
         const lastRecordDate = records[records.length - 1]?.attendDate;
         if (lastRecordDate) {
-            setCurrentDate(new Date(lastRecordDate));
+            const parsedDate = parseDateOnly(lastRecordDate);
+            if (parsedDate) setCurrentDate(parsedDate);
         }
     }, [records]);
 
     // --- Helpers ---
     const formatDateKey = (day: number, month: number, year: number) =>
         `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-    const apiToUiDate = (apiDate: string) => {
-        const [y, m, d] = apiDate.split('-');
-        return `${d}/${m}/${y}`;
-    };
 
     const calendarDays = useMemo(() => {
         const year = currentDate.getFullYear();
@@ -52,7 +49,7 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
         return days;
     }, [currentDate]);
 
-    const selectedRecord = records.find(r => apiToUiDate(r.attendDate) === selectedDate);
+    const selectedRecord = records.find(r => r.attendDate === selectedDate);
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center p-20 space-y-4">
@@ -86,7 +83,7 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
                             <div className="flex items-center justify-between mb-8">
                                 <div>
                                     <h2 className="text-xl font-black text-slate-900">Shift Insights</h2>
-                                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mt-1">{selectedDate}</p>
+                                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mt-1">{formatDateOnly(selectedDate)}</p>
                                 </div>
                                 {selectedRecord && (
                                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${
@@ -107,8 +104,8 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <MetricBox label="Check In" value={selectedRecord.inTime} icon={<ArrowUpRight className="text-emerald-500"/>} />
-                                    <MetricBox label="Check Out" value={selectedRecord.outTime} icon={<ArrowDownLeft className="text-rose-500"/>} />
+                                    <MetricBox label="Check In" value={formatClockTime(selectedRecord.inTime)} icon={<ArrowUpRight className="text-emerald-500"/>} />
+                                    <MetricBox label="Check Out" value={formatClockTime(selectedRecord.outTime)} icon={<ArrowDownLeft className="text-rose-500"/>} />
                                     <MetricBox label="Duration" value={selectedRecord.totalHours} icon={<Clock className="text-indigo-500"/>} />
                                     <MetricBox label="Work Mode" value="On-Site" icon={<Building2 className="text-slate-400"/>} />
                                 </div>
@@ -131,7 +128,7 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
                                         <ChevronLeft size={20} />
                                     </button>
                                     <span className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">
-                                        {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                        {currentDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                                     </span>
                                     <button 
                                         onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} 
@@ -147,10 +144,9 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
                                     ))}
                                     {calendarDays.map((item, index) => {
                                         const apiDateKey = formatDateKey(item.day, currentDate.getMonth(), currentDate.getFullYear());
-                                        const uiDateKey = apiToUiDate(apiDateKey);
                                         const isCurrentMonth = item.month === 'current';
                                         const record = isCurrentMonth ? records.find(r => r.attendDate === apiDateKey) : null;
-                                        const isSelected = isCurrentMonth && selectedDate === uiDateKey;
+                                        const isSelected = isCurrentMonth && selectedDate === apiDateKey;
                                         
                                         // Refined logic for white theme colors
                                         const getWhiteThemeStatus = (status: string | null, selected: boolean) => {
@@ -174,7 +170,7 @@ export default function AttendanceManagement({ employee, isPopup = false }: any)
                                         return (
                                             <button
                                                 key={index}
-                                                onClick={() => isCurrentMonth && setSelectedDate(uiDateKey)}
+                                                onClick={() => isCurrentMonth && setSelectedDate(apiDateKey)}
                                                 disabled={!isCurrentMonth}
                                                 className={`aspect-square rounded-xl text-[11px] font-bold flex items-center justify-center ${base} ${
                                                     isCurrentMonth ? indicator : 'text-slate-200 cursor-default bg-transparent'

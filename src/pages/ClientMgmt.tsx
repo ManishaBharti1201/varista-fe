@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useCompanyStore } from '../store/CompanyStore';
 import { Toast } from '../components/Toast';
+import { formatTimestampDate } from '../utils/dateTime';
 
 export default function ClientMgmt() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -181,7 +182,7 @@ export default function ClientMgmt() {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <p className="text-xs font-bold text-slate-600">{client.createdAt}</p>
+                      <p className="text-xs font-bold text-slate-600">{formatTimestampDate(client.createdAt)}</p>
                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">ID: #{client.id}</p>
                     </td>
                     <td className="px-6 py-5">

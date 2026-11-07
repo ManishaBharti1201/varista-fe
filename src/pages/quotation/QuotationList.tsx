@@ -9,6 +9,7 @@ import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
 import { apiRequest } from '../../utils/apiClient';
 import { downloadPdf } from '../../utils/downloadPdf';
+import { formatTimestampDate } from '../../utils/dateTime';
 
 interface QuotationRow {
   id: string;
@@ -68,7 +69,7 @@ export default function QuotationList() {
     customerName: est.customerName || 'Unknown Customer',
     amount: `₹${est.totalAmount?.toLocaleString('en-IN') || '0'}`,
     status: est.status || 'Pending',
-    creationDate: est.creationDate ? new Date(est.creationDate).toLocaleDateString('en-GB').replace(/\//g, '-') : 'N/A'
+    creationDate: est.creationDate ? formatTimestampDate(est.creationDate) : 'N/A'
   });
 
   const loadQuotations = useCallback(async () => {

@@ -9,6 +9,7 @@ import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
 import { apiRequest } from '../../utils/apiClient';
 import { downloadPdf } from '../../utils/downloadPdf';
+import { formatDateOnly } from '../../utils/dateTime';
 
 interface InvoiceRow {
   invoiceId: string;
@@ -75,7 +76,7 @@ export default function InvoiceList() {
     client: inv.buyer?.id || inv.buyerId || 'Unknown',
     amount: `₹${inv.totalAmount?.toLocaleString('en-IN') || '0'}`,
     status: inv.status,
-    due: inv.dated ? new Date(inv.dated).toLocaleDateString('en-GB').replace(/\//g, '-') : 'N/A'
+    due: inv.dated ? formatDateOnly(inv.dated) : 'N/A'
   });
 
   const loadInvoices = useCallback(async () => {

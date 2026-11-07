@@ -9,6 +9,17 @@ quotations, employees, user administration, notifications, and timesheet/
 holiday reporting. The BFF proxies authenticated API requests to the configured
 service.
 
+## Date and time contract
+
+Date-only API values (for example employee dates, attendance dates, and invoice
+dates) use ISO `YYYY-MM-DD` strings and are never converted between time zones.
+The frontend displays these as `DD MMM YYYY`.
+
+Timestamps represent UTC instants and are serialized as ISO 8601 values with a
+`Z` suffix. The frontend displays them in the user's device time zone using a
+24-hour clock. Attendance check-in and check-out values are local wall-clock
+times, not instants; APIs use `HH:mm` for these values.
+
 ## Multi-client support
 
 The frontend loads its client catalog from `GET /api/clients`. Users select a

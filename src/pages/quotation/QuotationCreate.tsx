@@ -5,6 +5,7 @@ import { endpoints } from '../../config/urls';
 import { useCompanyStore } from "../../store/CompanyStore";
 import { Toast } from "../../components/Toast";
 import { apiRequest } from "../../utils/apiClient";
+import { todayDateOnly } from "../../utils/dateTime";
 
 export default function QuotationCreate() {
   const navigate = useNavigate();
@@ -92,7 +93,7 @@ export default function QuotationCreate() {
       const res = await apiRequest(endpoints.quotationCreate(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...quotation, creationDate: new Date().toISOString() }),
+        body: JSON.stringify({ ...quotation, creationDate: todayDateOnly() }),
       });
       if (res.ok) {
         reset(); // <--- Add this call here

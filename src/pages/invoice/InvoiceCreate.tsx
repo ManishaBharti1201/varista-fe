@@ -5,6 +5,7 @@ import { endpoints } from '../../config/urls';
 import { useCompanyStore } from "../../store/CompanyStore";
 import { Toast } from "../../components/Toast";
 import { apiRequest } from "../../utils/apiClient";
+import { todayDateOnly } from "../../utils/dateTime";
 
 export default function InvoiceCreate() {
   const navigate = useNavigate();
@@ -109,7 +110,7 @@ export default function InvoiceCreate() {
       const res = await apiRequest(endpoints.invoiceCreate(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(invoice),
+        body: JSON.stringify({ ...invoice, createdAt: todayDateOnly() }),
       });
 
       if (res.ok) {
