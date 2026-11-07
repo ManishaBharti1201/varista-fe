@@ -19,6 +19,19 @@ export interface Company {
   ledgerBalance: number;
 }
 
+type CompanyResponse = Omit<Company, 'ledgerBalance'> & {
+  ledgerBalance?: number | null;
+};
+
+const normalizeCompany = (company: CompanyResponse): Company => {
+  const ledgerBalance = Number(company.ledgerBalance ?? 0);
+
+  return {
+    ...company,
+    ledgerBalance: Number.isFinite(ledgerBalance) ? ledgerBalance : 0
+  };
+};
+
 interface CompanyState {
   companies: Company[];
   loading: boolean;
@@ -47,7 +60,7 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
         method: 'GET',
       });
       const data = await res.json();
-      set({ companies: data, loading: false });
+      set({ companies: data.map(normalizeCompany), loading: false });
     } catch (err) {
       console.error('Failed to fetch companies', err);
       set({ loading: false });
@@ -76,7 +89,7 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       data.color = payload.color;
       data.avatar = payload.avatar;
       data.createdAt = payload.createdAt;
-      set(state => ({ companies: [...state.companies, data], loading: false }));
+      set(state => ({ companies: [...state.companies, normalizeCompany(data)], loading: false }));
 
     } catch (err) {
       console.error('Failed to create company', err);
@@ -105,9 +118,10 @@ export const useCompanyStore = create<CompanyState>((set, get) => ({
       if (!res.ok) throw new Error('Failed to update company on server');
 
       const data = await res.json();
+      const company = normalizeCompany(data);
 
       set(state => ({
-        companies: state.companies.map(c => c.id === data.id ? data : c),
+        companies: state.companies.map(c => c.id === company.id ? company : c),
         loading: false
       }));
     } catch (err) {

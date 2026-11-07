@@ -53,12 +53,6 @@ const getRandomColor = () => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return 'N/A';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
 export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   employees: [],
   loading: false,
@@ -110,11 +104,11 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       }
       const serverData = await res.json();
 
-      // 2. Merge server data with our generated visuals & formatted date
+      // Keep API dates in ISO format so they remain valid for date inputs and API requests.
       const finalEmployee = {
         ...serverData,
         ...visualProps,
-        joiningDate: formatDate(serverData.joiningDate || payload.joiningDate)
+        joiningDate: serverData.joiningDate || payload.joiningDate
       };
 
       set(state => ({
@@ -136,11 +130,6 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       ...emp,
       avatar: emp.avatar || getInitials(emp.firstName, emp.lastName),
       color: emp.color || getRandomColor(),
-      // Check if date is already formatted (contains letters like 'Mar') 
-      // otherwise format it.
-      joiningDate: /[a-zA-Z]/.test(emp.joiningDate) 
-        ? emp.joiningDate 
-        : formatDate(emp.joiningDate),
       timesheetPresent: emp.timesheetPresent || false
     }));
 

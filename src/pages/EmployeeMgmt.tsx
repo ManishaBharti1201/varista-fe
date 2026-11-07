@@ -82,6 +82,13 @@ export default function EmployeeMgmt() {
         return `${day}/${months[parseInt(month) - 1] || month}/${year}`;
     };
 
+    const formatEmployeeDate = (dateStr: string) => {
+        const match = dateStr?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return dateStr || 'N/A';
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${match[3]} ${months[Number(match[2]) - 1]} ${match[1]}`;
+    };
+
     // --- Event Handlers ---
     const handleEditClick = (employee: Employee) => {
         setSelectedEmployee(employee);
@@ -269,7 +276,7 @@ export default function EmployeeMgmt() {
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><Calendar size={10} /> Joined</p>
-                                    <p className="text-xs font-bold text-slate-700">{r.joiningDate}</p>
+                                    <p className="text-xs font-bold text-slate-700">{formatEmployeeDate(r.joiningDate)}</p>
                                 </div>
                             </div>
                             <div className="flex gap-2">
@@ -320,7 +327,7 @@ export default function EmployeeMgmt() {
                                     </td>
                                     <td className="px-6 py-5 text-sm font-bold text-slate-600">{r.role}</td>
                                     <td className="px-6 py-5 text-xs font-mono text-slate-500 font-bold">{r.adhaar}</td>
-                                    <td className="px-6 py-5 text-xs font-bold text-slate-500">{r.joiningDate}</td>
+                                    <td className="px-6 py-5 text-xs font-bold text-slate-500">{formatEmployeeDate(r.joiningDate)}</td>
                                     <td className="px-8 py-5">
                                         <div className="flex items-center justify-end gap-2">
                                             <button onClick={() => handleEditClick(r)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all"><Edit3Icon size={16} /></button>
