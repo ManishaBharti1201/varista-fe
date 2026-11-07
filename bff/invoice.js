@@ -119,7 +119,8 @@ router.get('/invoice/:id/download', async (req, res) => {
       console.error(`[${new Date().toISOString()}] Invoice service returned a non-PDF response for ${req.params.id}`);
       return res.status(502).json({ message: 'The invoice service did not return a valid PDF.' });
     }
-    res.setHeader('Content-Disposition', `attachment; filename="${req.params.id}.pdf"`);
+    const safeId = req.params.id.replace(/[^A-Za-z0-9_-]/g, '');
+    res.setHeader('Content-Disposition', `attachment; filename="INV-${safeId}.pdf"`);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', body.length);
     res.send(body);
@@ -155,6 +156,7 @@ router.post('/invoice/:id/replace', async (req, res) => {
     const target = EXTERNAL_INVOICE_REPLACE_URL.replace('{id}', req.params.id);
     const headers = tenantHeaders(req, {});
     delete headers.host;
+    if (req.headers['content-type']) headers['Content-Type'] = req.headers['content-type'];
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
     console.log(`[${new Date().toISOString()}] BFF calling external service: [POST] ${target}`);

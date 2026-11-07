@@ -96,7 +96,8 @@ router.get('/quotation/:id/download', async (req, res) => {
     }
 
     const body = Buffer.from(await resp.arrayBuffer());
-    res.setHeader('Content-Disposition', `attachment; filename="${req.params.id}.pdf"`);
+    const safeId = req.params.id.replace(/[^A-Za-z0-9_-]/g, '');
+    res.setHeader('Content-Disposition', `attachment; filename="QTN-${safeId}.pdf"`);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', body.length);
     res.send(body);

@@ -8,6 +8,7 @@ import { useCompanyStore } from '../../store/CompanyStore';
 import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
 import { apiRequest } from '../../utils/apiClient';
+import { downloadPdf } from '../../utils/downloadPdf';
 
 interface InvoiceRow {
   invoiceId: string;
@@ -90,37 +91,9 @@ export default function InvoiceList() {
     setDownloadingInvoiceId(id);
     setDownloadError(null);
     try {
-      const response = await apiRequest(endpoints.invoiceDownload(undefined, id), { method: 'GET' });
-      if (!response.ok) {
-        const responseText = await response.text();
-        let message = response.status === 404
-          ? 'The invoice PDF is unavailable. It may have been deleted or not generated.'
-          : `Unable to download invoice (HTTP ${response.status}).`;
-        try {
-          const errorBody = JSON.parse(responseText) as { message?: unknown };
-          if (typeof errorBody.message === 'string') message = errorBody.message;
-        } catch {
-          // Keep the status-based message for non-JSON error responses.
-        }
-        throw new Error(message);
-      }
-
-      const blob = await response.blob();
-      const contentType = response.headers.get('content-type')?.toLowerCase() || '';
-      if (!contentType.includes('application/pdf') || await blob.slice(0, 5).text() !== '%PDF-') {
-        throw new Error('The server did not return a valid invoice PDF. Please try again later.');
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `INV-${id}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      await downloadPdf(endpoints.invoiceDownload(undefined, id), `INV-${id}.pdf`);
       setDownloadError(null);
-      showToast('Downloaded successfully');
+      showToast('Invoice download started');
     } catch (err) {
       const message = err instanceof Error
         ? err.message

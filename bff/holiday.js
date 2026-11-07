@@ -36,7 +36,7 @@ router.get('/holiday/all', async (req, res) => {
 
 router.post('/holiday/create', async (req, res) => {
   try {
-    const headers = tenantHeaders(req, {});
+    const headers = tenantHeaders(req, { 'Content-Type': 'application/json' });
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
@@ -60,7 +60,7 @@ router.post('/holiday/create', async (req, res) => {
 
 router.post('/holiday/delete', async (req, res) => {
   try {
-    const headers = tenantHeaders(req, {});
+    const headers = tenantHeaders(req, { 'Content-Type': 'application/json' });
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 

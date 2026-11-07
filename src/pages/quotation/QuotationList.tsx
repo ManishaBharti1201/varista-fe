@@ -8,6 +8,7 @@ import { useCompanyStore } from '../../store/CompanyStore';
 import { endpoints } from '../../config/urls';
 import { Toast } from "../../components/Toast";
 import { apiRequest } from '../../utils/apiClient';
+import { downloadPdf } from '../../utils/downloadPdf';
 
 interface QuotationRow {
   id: string;
@@ -90,13 +91,11 @@ export default function QuotationList() {
 
   const downloadQuotation = async (id: string) => {
     try {
-      const response = await apiRequest(`${endpoints.quotationDownload(undefined, id)}`, { method: 'GET' });
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `QTN-${id}.pdf`; a.click();
-      showToast('Download started');
-    } catch (err) { showToast('Download failed', 'error'); }
+      await downloadPdf(endpoints.quotationDownload(undefined, id), `QTN-${id}.pdf`);
+      showToast('Quotation download started');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Download failed', 'error');
+    }
   };
 
   useEffect(() => { loadQuotations(); }, [loadQuotations]);

@@ -14,7 +14,7 @@ router.post('/employee/upsert', async (req, res) => {
     return res.status(400).json({ message: 'employee payload is required' });
   }
   try {
-    const headers = tenantHeaders(req, {});
+    const headers = tenantHeaders(req, { 'Content-Type': 'application/json' });
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
@@ -68,7 +68,7 @@ router.delete('/employee/:id', async (req, res) => {
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
-    const resp = await fetchService(req, target, { method: 'DELETE', headers });
+    const resp = await fetch(target, { method: 'DELETE', headers });
     const body = await resp.json().catch(() => null);
 
     if (!resp.ok) return res.status(resp.status).json({ message: body?.message || 'external service error', details: body });

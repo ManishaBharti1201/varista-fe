@@ -136,6 +136,8 @@ once and may uninstall the old app separately. The existing pipeline produced
 debug APKs, whose signing key may differ between builds. Use the same release
 keystore for subsequent builds so Android can install updates in place. Users
 must allow Syncra to install unknown apps and confirm installation in Android.
+Invoice and quotation PDFs downloaded in the Android app are handled by
+Android's Download Manager and appear in the device's Downloads location.
 
 ## Docker
 

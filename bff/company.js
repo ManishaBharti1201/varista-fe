@@ -49,7 +49,7 @@ router.post('/company/create', async (req, res) => {
   }
 
   try {
-    const headers = tenantHeaders(req, {});
+    const headers = tenantHeaders(req, { 'Content-Type': 'application/json' });
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
@@ -83,7 +83,7 @@ router.put('/company/:id/update', async (req, res) => {
   }
 
   try {
-    const headers = tenantHeaders(req, {});
+    const headers = tenantHeaders(req, { 'Content-Type': 'application/json' });
     if (req.headers && req.headers.authorization) headers.authorization = req.headers.authorization;
     if (process.env.BFF_API_KEY) headers['x-api-key'] = process.env.BFF_API_KEY;
 
