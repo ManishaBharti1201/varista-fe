@@ -97,7 +97,17 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
         body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      if (!res.ok) {
+        const responseText = await res.text();
+        let message = `Server returned ${res.status}`;
+        try {
+          const responseBody = JSON.parse(responseText) as { message?: unknown };
+          if (typeof responseBody.message === 'string') message = responseBody.message;
+        } catch {
+          if (responseText) message = responseText;
+        }
+        throw new Error(message);
+      }
       const serverData = await res.json();
 
       // 2. Merge server data with our generated visuals & formatted date

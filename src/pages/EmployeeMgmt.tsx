@@ -128,11 +128,19 @@ export default function EmployeeMgmt() {
         try {
             const employeeData = { ...formData };
             payrollProfileFields.forEach(field => delete employeeData[field]);
+            for (const field of ['id', 'adhaar', 'eip', 'esic', 'uan'] as const) {
+                const value = employeeData[field];
+                if (value !== undefined) {
+                    const digits = String(value).replace(/\D/g, '');
+                    if (digits) employeeData[field] = digits;
+                    else delete employeeData[field];
+                }
+            }
             await upsertEmployee(employeeData as Employee);
             showToast(selectedEmployee ? 'Staff updated successfully' : 'Staff registered successfully');
             handleCancel();
         } catch (err) {
-            showToast('Failed to save employee data', 'error');
+            showToast(err instanceof Error ? err.message : 'Failed to save employee data', 'error');
         } finally {
             setSubmitting(false);
         }
